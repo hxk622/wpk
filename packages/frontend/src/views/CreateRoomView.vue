@@ -76,6 +76,7 @@
             </div>
             <van-popup v-model:show="showMaxPlayersPicker" round position="bottom" :style="{ height: '400px' }">
               <van-picker
+                ref="maxPlayersPickerRef"
                 :columns="maxPlayersOptions"
                 @confirm="(value) => { roomForm.maxPlayers = value.value; showMaxPlayersPicker = false; }"
                 show-toolbar
@@ -140,7 +141,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../stores/user';
 import roomApi from '../api/room';
@@ -191,6 +192,71 @@ const loading = ref(false);
 // 选择器显示状态
 const showMaxPlayersPicker = ref(false);
 const showGameModePicker = ref(false);
+
+// 选择器ref
+const maxPlayersPickerRef = ref(null);
+const gameModePickerRef = ref(null);
+
+// 鼠标滚轮事件处理
+const handleWheel = (e, pickerRef, options, currentValue, setValue) => {
+  e.preventDefault();
+  
+  // 查找当前选中项的索引
+  const currentIndex = options.findIndex(opt => opt.value === currentValue);
+  
+  // 根据滚轮方向计算新索引
+  let newIndex;
+  if (e.deltaY < 0) {
+    // 向上滚动，选择上一项
+    newIndex = Math.max(0, currentIndex - 1);
+  } else {
+    // 向下滚动，选择下一项
+    newIndex = Math.min(options.length - 1, currentIndex + 1);
+  }
+  
+  // 更新值
+  setValue(options[newIndex].value);
+};
+
+// 添加鼠标滚轮事件监听器
+const addWheelEventListener = () => {
+  if (maxPlayersPickerRef.value) {
+    const pickerEl = maxPlayersPickerRef.value.$el;
+    pickerEl.addEventListener('wheel', (e) => {
+      handleWheel(e, maxPlayersPickerRef, maxPlayersOptions, roomForm.maxPlayers, (value) => {
+        roomForm.maxPlayers = value;
+      });
+    });
+  }
+  
+  if (gameModePickerRef.value) {
+    const pickerEl = gameModePickerRef.value.$el;
+    pickerEl.addEventListener('wheel', (e) => {
+      handleWheel(e, gameModePickerRef, gameModeOptions, roomForm.gameMode, (value) => {
+        roomForm.gameMode = value;
+      });
+    });
+  }
+};
+
+// 监听弹出层显示事件，添加鼠标滚轮支持
+watch(() => showMaxPlayersPicker.value, (newValue) => {
+  if (newValue) {
+    // 延迟添加事件监听器，确保DOM已渲染
+    setTimeout(() => {
+      addWheelEventListener();
+    }, 100);
+  }
+});
+
+watch(() => showGameModePicker.value, (newValue) => {
+  if (newValue) {
+    // 延迟添加事件监听器，确保DOM已渲染
+    setTimeout(() => {
+      addWheelEventListener();
+    }, 100);
+  }
+});
 
 // 获取当前选中的文本 - 彻底避免使用索引访问
 const getMaxPlayersText = () => {

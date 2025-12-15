@@ -63,7 +63,11 @@
 <script setup>
 import { computed } from 'vue';
 import Card from './Card.vue';
-import { formatMoney } from '@poker/shared';
+
+// 本地实现formatMoney函数，避免从shared包导入
+const formatMoney = (amount) => {
+  return `$${amount.toFixed(2)}`;
+};
 
 const props = defineProps({
   players: {
