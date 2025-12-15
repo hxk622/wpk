@@ -1,0 +1,1 @@
+import{a as e}from"./axios-DCPBCOZw.js";const s={register:r=>e.post("/users/register",r),login:r=>e.post("/users/login",r),getProfile:()=>e.get("/users/profile"),updateProfile:r=>e.put("/users/profile",r),getStats:()=>e.get("/users/stats")};export{s as u};

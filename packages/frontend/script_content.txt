@@ -1,0 +1,908 @@
+261:<script setup>
+262-import { ref, reactive, computed, onMounted, watch } from 'vue';
+263-import { useRouter, useRoute } from 'vue-router';
+264-import gameApi from '../api/game';
+265-import { showToast, showConfirmDialog } from 'vant';
+266-import { getCurrentUser } from '../store/user';
+267-
+268-// 路由和参数
+269-const router = useRouter();
+270-const route = useRoute();
+271-const gameId = route.params.id;
+272-
+273-// 当前用户信息
+274-const currentUser = getCurrentUser();
+275-const currentUserId = currentUser?.id;
+276-
+277-// 游戏状态
+278-const gameState = reactive({
+279-  statusText: '等待开始',
+280-  currentRound: '翻牌前',
+281-  currentPlayer: '',
+282-  pot: 0,
+283-  smallBlind: 10,
+284-  bigBlind: 20,
+285-  communityCards: [
+286-    { suit: 'S', value: 'A', revealed: false },
+287-    { suit: 'H', value: 'K', revealed: false },
+288-    { suit: 'D', value: 'Q', revealed: false },
+289-    { suit: 'C', value: 'J', revealed: false },
+290-    { suit: 'S', value: '10', revealed: false }
+291-  ]
+292-});
+293-
+294-// 玩家座位（模拟数据，实际应该从服务器获取）
+295-const playerSeats = reactive([
+296-  // 座位0-8，按照德州扑克顺时针座位排列
+297-  { index: 0, player: null, isActive: false, isCurrentPlayer: false, isDealer: false, isSmallBlind: false, isBigBlind: false },
+298-  { index: 1, player: null, isActive: false, isCurrentPlayer: false, isDealer: false, isSmallBlind: false, isBigBlind: false },
+299-  { index: 2, player: null, isActive: false, isCurrentPlayer: false, isDealer: false, isSmallBlind: false, isBigBlind: false },
+300-  { index: 3, player: null, isActive: false, isCurrentPlayer: false, isDealer: false, isSmallBlind: false, isBigBlind: false },
+301-  { index: 4, player: null, isActive: false, isCurrentPlayer: false, isDealer: false, isSmallBlind: false, isBigBlind: false },
+302-  { index: 5, player: null, isActive: false, isCurrentPlayer: false, isDealer: false, isSmallBlind: false, isBigBlind: false },
+303-  { index: 6, player: null, isActive: false, isCurrentPlayer: false, isDealer: false, isSmallBlind: false, isBigBlind: false },
+304-  { index: 7, player: null, isActive: false, isCurrentPlayer: false, isDealer: false, isSmallBlind: false, isBigBlind: false },
+305-  { index: 8, player: null, isActive: false, isCurrentPlayer: false, isDealer: false, isSmallBlind: false, isBigBlind: false }
+306-]);
+307-
+308-// 当前玩家手牌
+309-const playerCards = reactive([
+310-  { suit: 'S', value: 'A' },
+311-  { suit: 'H', value: 'A' }
+312-]);
+313-
+314-// AI分析结果
+315-const aiAnalysis = reactive({
+316-  enabled: true,
+317-  realTime: true,
+318-  show: false,
+319-  loading: false,
+320-  handCombination: '一对A',
+321-  handStrength: '极强',
+322-  winProbability: 95,
+323-  recommendedAction: '加注',
+324-  explanation: '当前手牌为一对A，是德州扑克中最强的起手牌之一，建议进行加注以扩大底池。',
+325-  adviceStrength: 3
+326-});
+327-
+328-// 聊天功能
+329-const chatMessages = ref([]);
+330-const chatInput = ref('');
+331-const activeTab = ref(0);
+332-
+333-// 下注相关
+334-const betAmount = ref(0);
+335-const minBet = computed(() => gameState.bigBlind);
+336-const maxBet = computed(() => currentUser?.stack || 1000);
+337-
+338-// 计算属性
+339-const canCheck = computed(() => betAmount.value === 0);
+340-const canCheckOrCall = computed(() => true); // 实际应该根据游戏状态判断
+341-const canRaise = computed(() => betAmount.value > minBet.value && betAmount.value <= maxBet.value);
+342-
+343-// 获取扑克牌花色符号
+344-const getSuitSymbol = (suit) => {
+345-  const symbols = {
+346-    'S': '♠',
+347-    'H': '♥',
+348-    'D': '♦',
+349-    'C': '♣'
+350-  };
+351-  return symbols[suit] || suit;
+352-};
+353-
+354-// 下注金额变化处理
+355-const onBetChange = (value) => {
+356-  // 这里可以添加下注金额变化时的逻辑
+357-};
+358-
+359-// 设置下注金额
+360-const setBetAmount = (amount) => {
+361-  betAmount.value = Math.min(Math.max(amount, minBet.value), maxBet.value);
+362-};
+363-
+364-// 弃牌
+365-const fold = async () => {
+366-  try {
+367-    await gameApi.playerAction(gameId, 'fold');
+368-    // 更新游戏状态
+369-  } catch (error) {
+370-    console.error('弃牌失败:', error);
+371-    showToast('弃牌失败');
+372-  }
+373-};
+374-
+375-// 过牌或跟注
+376-const checkOrCall = async () => {
+377-  const action = canCheck.value ? 'check' : 'call';
+378-  try {
+379-    await gameApi.playerAction(gameId, action);
+380-    // 更新游戏状态
+381-  } catch (error) {
+382-    console.error(action + '失败:', error);
+383-    showToast(action + '失败');
+384-  }
+385-};
+386-
+387-// 加注
+388-const raise = async () => {
+389-  if (betAmount.value <= minBet.value) {
+390-    showToast('加注金额必须大于跟注金额');
+391-    return;
+392-  }
+393-  
+394-  try {
+395-    await gameApi.playerAction(gameId, 'raise', betAmount.value);
+396-    // 更新游戏状态
+397-  } catch (error) {
+398-    console.error('加注失败:', error);
+399-    showToast('加注失败');
+400-  }
+401-};
+402-
+403-// 发送聊天消息
+404-const sendChatMessage = async () => {
+405-  if (!chatInput.value.trim()) return;
+406-  
+407-  const message = {
+408-    senderId: currentUserId,
+409-    username: currentUser.username,
+410-    content: chatInput.value.trim(),
+411-    timestamp: new Date().toISOString()
+412-  };
+413-  
+414-  // 先添加到本地
+415-  chatMessages.value.push(message);
+416-  chatInput.value = '';
+417-  
+418-  try {
+419-    // 发送到服务器
+420-    await gameApi.sendMessage(gameId, message.content);
+421-  } catch (error) {
+422-    console.error('发送消息失败:', error);
+423-    // 可以选择从本地移除失败的消息
+424-    chatMessages.value.pop();
+425-    showToast('发送消息失败');
+426-  }
+427-};
+428-
+429-// 切换AI辅助
+430-const toggleAiAssist = () => {
+431-  if (aiAnalysis.enabled && aiAnalysis.realTime) {
+432-    requestAiAnalysis();
+433-  } else {
+434-    aiAnalysis.show = false;
+435-  }
+436-};
+437-
+438-// 请求AI分析
+439-const requestAiAnalysis = async () => {
+440-  if (!aiAnalysis.enabled) return;
+441-  
+442-  aiAnalysis.loading = true;
+443-  try {
+444-    // 调用API获取AI分析结果
+445-    const response = await gameApi.requestAiAnalysis(gameId, playerCards, gameState.communityCards);
+446-    
+447-    // 更新分析结果
+448-    if (response && response.analysis) {
+449-      Object.assign(aiAnalysis, {
+450-        show: true,
+451-        handCombination: response.analysis.handCombination,
+452-        handStrength: response.analysis.handStrength,
+453-        winProbability: response.analysis.winProbability,
+454-        recommendedAction: response.analysis.recommendedAction,
+455-        explanation: response.analysis.explanation
+456-      });
+457-    } else {
+458-      // 默认分析结果（当API不可用时）
+459-      aiAnalysis.show = true;
+460-      aiAnalysis.handCombination = '一对A';
+461-      aiAnalysis.handStrength = '极强';
+462-      aiAnalysis.winProbability = 95;
+463-      aiAnalysis.recommendedAction = '加注';
+464-      aiAnalysis.explanation = '当前手牌为一对A，是德州扑克中最强的起手牌之一，建议进行加注以扩大底池。';
+465-    }
+466-  } catch (error) {
+467-    console.error('AI分析请求失败:', error);
+468-    showToast('AI分析请求失败');
+469-    
+470-    // 失败时显示默认分析结果
+471-    aiAnalysis.show = true;
+472-    aiAnalysis.handCombination = '一对A';
+473-    aiAnalysis.handStrength = '极强';
+474-    aiAnalysis.winProbability = 95;
+475-    aiAnalysis.recommendedAction = '加注';
+476-    aiAnalysis.explanation = '当前手牌为一对A，是德州扑克中最强的起手牌之一，建议进行加注以扩大底池。';
+477-  } finally {
+478-    aiAnalysis.loading = false;
+479-  }
+480-};
+481-
+482-// 初始化游戏
+483-const initGame = async () => {
+484-  try {
+485-    const response = await gameApi.getGameState(gameId);
+486-    if (response && response.gameState) {
+487-      // 更新游戏状态
+488-      Object.assign(gameState, response.gameState);
+489-      
+490-      // 更新玩家座位
+491-      // ...
+492-      
+493-      // 如果AI辅助启用且实时分析开启，请求AI分析
+494-      if (aiAnalysis.enabled && aiAnalysis.realTime) {
+495-        requestAiAnalysis();
+496-      }
+497-    }
+498-  } catch (error) {
+499-    console.error('初始化游戏失败:', error);
+500-    showToast('初始化游戏失败');
+501-    router.push(`/room/${roomId}`);
+502-  }
+503-};
+504-
+505-// 监听游戏状态变化
+506-const listenGameUpdates = () => {
+507-  // 实际项目中应该使用WebSocket监听游戏状态变化
+508-  // 这里使用定时器模拟游戏状态更新
+509-  const interval = setInterval(() => {
+510-    // 模拟游戏状态更新
+511-  }, 2000);
+512-  
+513-  return () => clearInterval(interval);
+514-};
+515-
+516-// 监听实时分析开关变化
+517-watch(
+518-  () => aiAnalysis.realTime,
+519-  (newValue) => {
+520-    if (newValue && aiAnalysis.enabled) {
+521-      requestAiAnalysis();
+522-    }
+523-  }
+524-);
+525-
+526-// 监听公共牌变化
+527-watch(
+528-  () => gameState.communityCards,
+529-  (newValue, oldValue) => {
+530-    // 检查是否有牌被翻开
+531-    const hasNewCardRevealed = newValue.some((card, index) => 
+532-      card.revealed && (!oldValue[index] || !oldValue[index].revealed)
+533-    );
+534-    
+535-    if (hasNewCardRevealed && aiAnalysis.enabled && aiAnalysis.realTime) {
+536-      requestAiAnalysis();
+537-    }
+538-  },
+539-  { deep: true }
+540-);
+541-
+542-// 组件挂载
+543-onMounted(() => {
+544-  initGame();
+545-  const cleanup = listenGameUpdates();
+546-  
+547-  return () => {
+548-    cleanup();
+549-  };
+550-});
+551-</script>
+552-
+553-<style scoped>
+554-.game-container {
+555-  min-height: 100vh;
+556-  background-color: #1a5319;
+557-  color: white;
+558-  display: flex;
+559-  flex-direction: column;
+560-}
+561-
+562-/* 顶部状态栏 */
+563-.top-status {
+564-  display: flex;
+565-  justify-content: space-between;
+566-  align-items: center;
+567-  padding: 10px 20px;
+568-  background-color: rgba(0, 0, 0, 0.3);
+569-}
+570-
+571-.game-status {
+572-  display: flex;
+573-  gap: 15px;
+574-}
+575-
+576-.status-item {
+577-  display: flex;
+578-  align-items: center;
+579-  font-size: 14px;
+580-}
+581-
+582-.status-item .label {
+583-  margin-right: 5px;
+584-  opacity: 0.8;
+585-}
+586-
+587-.status-item .value {
+588-  font-weight: 500;
+589-}
+590-
+591-.pot-info {
+592-  display: flex;
+593-  align-items: center;
+594-  font-size: 16px;
+595-}
+596-
+597-.pot-info .label {
+598-  margin-right: 5px;
+599-  opacity: 0.8;
+600-}
+601-
+602-.pot-info .value {
+603-  font-weight: bold;
+604-  color: #ffd700;
+605-}
+606-
+607-/* 游戏桌区域 */
+608-.game-table {
+609-  flex: 1;
+610-  display: flex;
+611-  flex-direction: column;
+612-  align-items: center;
+613-  justify-content: center;
+614-  position: relative;
+615-}
+616-
+617-/* 玩家座位 */
+618-.player-seats {
+619-  position: relative;
+620-  width: 300px;
+621-  height: 300px;
+622-  margin-bottom: 20px;
+623-}
+624-
+625-.player-seat {
+626-  position: absolute;
+627-  width: 100px;
+628-  height: 80px;
+629-  background-color: rgba(0, 0, 0, 0.2);
+630-  border-radius: 8px;
+631-  display: flex;
+632-  flex-direction: column;
+633-  align-items: center;
+634-  justify-content: center;
+635-  transition: all 0.3s ease;
+636-}
+637-
+638-/* 响应式设计 */
+639-@media (max-width: 480px) {
+640-  /* 玩家座位区域 */
+641-  .player-seats {
+642-    width: 250px;
+643-    height: 250px;
+644-  }
+645-  
+646-  /* 玩家座位 */
+647-  .player-seat {
+648-    width: 80px;
+649-    height: 60px;
+650-  }
+651-  
+652-  /* 座位位置调整 */
+653-  .player-seat:nth-child(1) { top: -15px; left: 85px; }
+654-  .player-seat:nth-child(2) { top: 15px; right: -15px; }
+655-  .player-seat:nth-child(3) { bottom: 15px; right: -15px; }
+656-  .player-seat:nth-child(4) { bottom: -15px; left: 85px; }
+657-  .player-seat:nth-child(5) { bottom: 15px; left: -15px; }
+658-  .player-seat:nth-child(6) { top: 15px; left: -15px; }
+659-  
+660-  /* 玩家信息 */
+661-  .player-avatar img {
+662-    width: 30px !important;
+663-    height: 30px !important;
+664-  }
+665-  
+666-  .player-name {
+667-    font-size: 10px;
+668-  }
+669-  
+670-  .player-stack, .player-bet {
+671-    font-size: 9px;
+672-  }
+673-  
+674-  /* 扑克牌 */
+675-  .card {
+676-    width: 40px;
+677-    height: 56px;
+678-  }
+679-  
+680-  .card-content {
+681-    font-size: 14px;
+682-  }
+683-  
+684-  .card-suit {
+685-    font-size: 20px;
+686-  }
+687-  
+688-  /* AI分析结果 */
+689-  .ai-analysis-result {
+690-    width: 160px;
+691-    padding: 8px;
+692-  }
+693-  
+694-  .analysis-content {
+695-    font-size: 10px;
+696-  }
+697-  
+698-  /* 游戏控制区域 */
+699-  .game-controls {
+700-    padding: 10px;
+701-  }
+702-  
+703-  /* 操作按钮 */
+704-  .action-buttons button {
+705-    padding: 10px 0;
+706-  }
+707-  
+708-  /* 聊天区域 */
+709-  .chat-section {
+710-    height: 180px;
+711-  }
+712-  
+713-  .message-content {
+714-    max-width: 85%;
+715-  }
+716-}
+717-
+718-.player-seat.active {
+719-  background-color: rgba(25, 137, 250, 0.4);
+720-}
+721-
+722-.player-seat.current-player {
+723-  background-color: rgba(7, 193, 96, 0.4);
+724-  border: 2px solid #07c160;
+725-}
+726-
+727-/* 座位位置（德州扑克圆形桌布局） */
+728-.player-seat:nth-child(1) { top: -20px; left: 100px; }
+729-.player-seat:nth-child(2) { top: 20px; right: -20px; }
+730-.player-seat:nth-child(3) { bottom: 20px; right: -20px; }
+731-.player-seat:nth-child(4) { bottom: -20px; left: 100px; }
+732-.player-seat:nth-child(5) { bottom: 20px; left: -20px; }
+733-.player-seat:nth-child(6) { top: 20px; left: -20px; }
+734-
+735-.player-info {
+736-  display: flex;
+737-  flex-direction: column;
+738-  align-items: center;
+739-  width: 100%;
+740-  padding: 5px;
+741-}
+742-
+743-.player-avatar {
+744-  margin-bottom: 5px;
+745-}
+746-
+747-.player-name {
+748-  font-size: 12px;
+749-  font-weight: 500;
+750-  white-space: nowrap;
+751-  overflow: hidden;
+752-  text-overflow: ellipsis;
+753-  width: 100%;
+754-  text-align: center;
+755-}
+756-
+757-.player-stack {
+758-  font-size: 11px;
+759-  display: flex;
+760-  flex-direction: column;
+761-  align-items: center;
+762-}
+763-
+764-.stack-value {
+765-  font-weight: bold;
+766-  color: #ffd700;
+767-}
+768-
+769-.stack-label {
+770-  opacity: 0.7;
+771-}
+772-
+773-.player-bet {
+774-  font-size: 11px;
+775-  margin-top: 2px;
+776-  padding: 2px 6px;
+777-  background-color: rgba(255, 215, 0, 0.3);
+778-  border-radius: 10px;
+779-}
+780-
+781-.bet-value {
+782-  font-weight: bold;
+783-  color: #ffd700;
+784-}
+785-
+786-.bet-label {
+787-  opacity: 0.7;
+788-}
+789-
+790-.dealer-badge {
+791-  position: absolute;
+792-  top: -5px;
+793-  left: -5px;
+794-  width: 20px;
+795-  height: 20px;
+796-  background-color: #ffd700;
+797-  color: black;
+798-  border-radius: 50%;
+799-  display: flex;
+800-  align-items: center;
+801-  justify-content: center;
+802-  font-size: 12px;
+803-  font-weight: bold;
+804-}
+805-
+806-.blind-badge {
+807-  position: absolute;
+808-  top: -5px;
+809-  right: -5px;
+810-  width: 20px;
+811-  height: 20px;
+812-  border-radius: 50%;
+813-  display: flex;
+814-  align-items: center;
+815-  justify-content: center;
+816-  font-size: 10px;
+817-  font-weight: bold;
+818-}
+819-
+820-.blind-badge.small {
+821-  background-color: #1989fa;
+822-}
+823-
+824-.blind-badge.big {
+825-  background-color: #ee0a24;
+826-}
+827-
+828-/* 公共牌区域 */
+829-.community-cards {
+830-  display: flex;
+831-  gap: 10px;
+832-  margin-bottom: 20px;
+833-}
+834-
+835-.card {
+836-  width: 50px;
+837-  height: 70px;
+838-  background-color: #f5f5f5;
+839-  border-radius: 4px;
+840-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+841-  position: relative;
+842-}
+843-
+844-.card.hidden {
+845-  background-color: #8b4513;
+846-  background-image: linear-gradient(45deg, #a0522d 25%, transparent 25%, transparent 75%, #a0522d 75%, #a0522d),
+847-                    linear-gradient(-45deg, #a0522d 25%, transparent 25%, transparent 75%, #a0522d 75%, #a0522d);
+848-  background-size: 20px 20px;
+849-}
+850-
+851-.card-content {
+852-  width: 100%;
+853-  height: 100%;
+854-  display: flex;
+855-  flex-direction: column;
+856-  align-items: center;
+857-  justify-content: center;
+858-  font-size: 18px;
+859-  font-weight: bold;
+860-}
+861-
+862-.card-suit {
+863-  font-size: 24px;
+864-  margin-bottom: 5px;
+865-}
+866-
+867-.card-suit.spades {
+868-  color: black;
+869-}
+870-
+871-.card-suit.hearts {
+872-  color: #ee0a24;
+873-}
+874-
+875-.card-suit.diamonds {
+876-  color: #ee0a24;
+877-}
+878-
+879-.card-suit.clubs {
+880-  color: black;
+881-}
+882-
+883-/* 底池显示 */
+884-.pot-display {
+885-  background-color: rgba(0, 0, 0, 0.3);
+886-  padding: 10px 20px;
+887-  border-radius: 20px;
+888-  display: flex;
+889-  flex-direction: column;
+890-  align-items: center;
+891-}
+892-
+893-.pot-label {
+894-  font-size: 12px;
+895-  opacity: 0.8;
+896-}
+897-
+898-.pot-amount {
+899-  font-size: 24px;
+900-  font-weight: bold;
+901-  color: #ffd700;
+902-}
+903-
+904-/* 当前玩家手牌 */
+905-.player-cards {
+906-  display: flex;
+907-  flex-direction: column;
+908-  align-items: center;
+909-  margin-bottom: 20px;
+910-}
+911-
+912-.cards-title {
+913-  font-size: 14px;
+914-  margin-bottom: 10px;
+915-  opacity: 0.8;
+916-}
+917-
+918-.cards-container {
+919-  display: flex;
+920-  gap: 10px;
+921-  margin-bottom: 10px;
+922-}
+923-
+924-.player-card {
+925-  width: 60px;
+926-  height: 84px;
+927-}
+928-
+929-/* AI分析结果 */
+930-.ai-analysis-result {
+931-  background-color: rgba(25, 137, 250, 0.2);
+932-  padding: 10px;
+933-  border-radius: 8px;
+934-  width: 200px;
+935-  text-align: center;
+936-}
+937-
+938-.analysis-title {
+939-  font-size: 12px;
+940-  margin-bottom: 8px;
+941-  opacity: 0.8;
+942-}
+943-
+944-.analysis-content {
+945-  font-size: 11px;
+946-  display: flex;
+947-  flex-direction: column;
+948-  gap: 5px;
+949-}
+950-
+951-.analysis-content .label {
+952-  opacity: 0.8;
+953-  margin-right: 5px;
+954-}
+955-
+956-.analysis-content .value {
+957-  font-weight: 500;
+958-}
+959-
+960-/* 游戏控制区域 */
+961-.game-controls {
+962-  background-color: rgba(0, 0, 0, 0.3);
+963-  padding: 15px;
+964-  border-radius: 8px;
+965-  margin-bottom: 10px;
+966-}
+967-
+968-/* 下注控制 */
+969-.bet-controls {
+970-  margin-bottom: 15px;
+971-}
+972-
+973-.bet-slider {
+974-  margin-bottom: 10px;
+975-}
+976-
+977-.bet-amount-display {
+978-  display: flex;
+979-  justify-content: center;
+980-  align-items: center;
+981-  margin-bottom: 10px;
+982-  font-size: 16px;
+983-}
+984-
+985-.bet-amount-display .label {
+986-  margin-right: 5px;
+987-  opacity: 0.8;
+988-}
+989-
+990-.bet-amount-display .value {
+991-  font-weight: bold;
+992-  color: #ffd700;
+993-}
+994-
+995-.bet-quick-buttons {
+996-  display: flex;
+997-  gap: 10px;
+998-  justify-content: center;
+999-}
+1000-
+1001-/* 操作按钮 */
+1002-.action-buttons {
+1003-  display: flex;
+1004-  flex-direction: column;
+1005-  gap: 10px;
+1006-}
+1007-
+1008-/* 底部功能栏 */
+1009-.bottom-bar {
+1010-  background-color: white;
+1011-  border-radius: 8px 8px 0 0;
+1012-  overflow: hidden;
+1013-}
+1014-
+1015-/* 聊天区域 */
+1016-.chat-section {
+1017-  height: 200px;
+1018-  display: flex;
+1019-  flex-direction: column;
+1020-}
+1021-
+1022-.chat-messages {
+1023-  flex: 1;
+1024-  overflow-y: auto;
+1025-  padding: 10px;
+1026-}
+1027-
+1028-.chat-message {
+1029-  margin-bottom: 10px;
+1030-}
+1031-
+1032-.chat-message.own-message .message-content {
+1033-  text-align: right;
+1034-}
+1035-
+1036-.message-content {
+1037-  max-width: 70%;
+1038-}
+1039-
+1040-.own-message .message-content {
+1041-  margin-left: auto;
+1042-}
+1043-
+1044-.message-sender {
+1045-  font-size: 12px;
+1046-  color: #969799;
+1047-  margin-bottom: 2px;
+1048-}
+1049-
+1050-.message-text {
+1051-  background-color: #f2f3f5;
+1052-  padding: 8px 12px;
+1053-  border-radius: 16px;
+1054-  font-size: 14px;
+1055-  word-wrap: break-word;
+1056-}
+1057-
+1058-.own-message .message-text {
+1059-  background-color: #1989fa;
+1060-  color: white;
+1061-}
+1062-
+1063-.chat-input {
+1064-  border-top: 1px solid #ebedf0;
+1065-  padding: 10px;
+1066-}
+1067-
+1068-/* AI辅助区域 */
+1069-.ai-assist-section {
+1070-  padding: 10px;
+1071-}
+1072-
+1073-.ai-controls {
+1074-  margin-bottom: 15px;
+1075-}
+1076-
+1077-.analysis-card {
+1078-  background-color: #f7f8fa;
+1079-  border-radius: 8px;
+1080-  padding: 15px;
+1081-}
+1082-
+1083-.card-title {
+1084-  font-size: 14px;
+1085-  font-weight: 500;
+1086-  margin-bottom: 10px;
+1087-  color: #323233;
+1088-}
+1089-
+1090-.card-content {
+1091-  font-size: 12px;
+1092-  color: #646566;
+1093-}
+1094-
+1095-.analysis-item {
+1096-  margin-bottom: 8px;
+1097-  display: flex;
+1098-  align-items: center;
+1099-}
+1100-
+1101-.item-label {
+1102-  width: 80px;
+1103-  opacity: 0.8;
+1104-}
+1105-
+1106-.item-value {
+1107-  flex: 1;
+1108-  font-weight: 500;
+1109-  color: #323233;
+1110-}
+1111-
+1112-.analysis-explanation {
+1113-  margin-top: 10px;
+1114-  padding-top: 10px;
+1115-  border-top: 1px solid #ebedf0;
+1116-}
+1117-
+1118-.explanation-label {
+1119-  font-weight: 500;
+1120-  margin-bottom: 5px;
+1121-  color: #323233;
+1122-}
+1123-
+1124-.explanation-text {
+1125-  font-size: 11px;
+1126-  line-height: 1.4;
+1127-  color: #646566;
+1128-}
+1129-
+1130-/* 响应式设计 */
+1131-@media (max-width: 480px) {
+1132-  .game-status {
+1133-    gap: 10px;
+1134-  }
+1135-  
+1136-  .status-item {
+1137-    font-size: 12px;
+1138-  }
+1139-  
+1140-  .player-seats {
+1141-    width: 250px;
+1142-    height: 250px;
+1143-  }
+1144-  
+1145-  .player-seat {
+1146-    width: 80px;
+1147-    height: 60px;
+1148-  }
+1149-  
+1150-  .player-name {
+1151-    font-size: 10px;
+1152-  }
+1153-  
+1154-  .player-stack {
+1155-    font-size: 10px;
+1156-  }
+1157-  
+1158-  .card {
+1159-    width: 45px;
+1160-    height: 63px;
+1161-  }
+1162-  
+1163-  .player-card {
+1164-    width: 55px;
+1165-    height: 77px;
+1166-  }
+1167-}
+1168-</style>

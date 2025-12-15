@@ -1,0 +1,9 @@
+# pnpm-workspace.yaml示例配置
+# 将此文件放在 /Users/xingkaihan/Documents/Code/wpk/ 目录下
+
+packages:
+  # 包含所有子目录中的package.json
+  - 'poker-frontend'
+  - 'poker-backend'
+  # 可以添加共享代码包
+  # - 'shared'

@@ -1,0 +1,3520 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "德州扑克游戏API",
+    "version": "1.0.0",
+    "description": "德州扑克游戏后端API文档"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "本地开发服务器"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "用户ID"
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名"
+          },
+          "email": {
+            "type": "string",
+            "description": "邮箱"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "头像"
+          },
+          "chips": {
+            "type": "number",
+            "description": "筹码数量"
+          },
+          "real_name_verified": {
+            "type": "boolean",
+            "description": "实名认证状态"
+          },
+          "verification_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "verified",
+              "rejected"
+            ],
+            "description": "认证状态"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "chips",
+          "real_name_verified",
+          "verification_status",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "RegisterUserInput": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "用户名"
+          },
+          "password": {
+            "type": "string",
+            "description": "密码"
+          },
+          "email": {
+            "type": "string",
+            "description": "邮箱"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "LoginUserInput": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "邮箱"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号"
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名"
+          },
+          "password": {
+            "type": "string",
+            "description": "密码"
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "GameRoom": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "房间ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "房间名称"
+          },
+          "owner_id": {
+            "type": "string",
+            "description": "房主ID"
+          },
+          "room_type": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "description": "房间类型"
+          },
+          "small_blind": {
+            "type": "number",
+            "description": "小盲注"
+          },
+          "big_blind": {
+            "type": "number",
+            "description": "大盲注"
+          },
+          "max_players": {
+            "type": "number",
+            "description": "最大玩家数"
+          },
+          "current_players": {
+            "type": "number",
+            "description": "当前玩家数"
+          },
+          "game_status": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "playing",
+              "finished"
+            ],
+            "description": "游戏状态"
+          },
+          "min_buy_in": {
+            "type": "number",
+            "description": "最小买入"
+          },
+          "max_buy_in": {
+            "type": "number",
+            "description": "最大买入"
+          },
+          "table_type": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "tournament"
+            ],
+            "description": "桌子类型"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "owner_id",
+          "room_type",
+          "small_blind",
+          "big_blind",
+          "max_players",
+          "current_players",
+          "game_status",
+          "table_type",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "CreateRoomInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "房间名称"
+          },
+          "room_type": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "description": "房间类型"
+          },
+          "small_blind": {
+            "type": "number",
+            "description": "小盲注"
+          },
+          "big_blind": {
+            "type": "number",
+            "description": "大盲注"
+          },
+          "max_players": {
+            "type": "number",
+            "description": "最大玩家数"
+          },
+          "password": {
+            "type": "string",
+            "description": "私人房间密码"
+          },
+          "min_buy_in": {
+            "type": "number",
+            "description": "最小买入"
+          },
+          "max_buy_in": {
+            "type": "number",
+            "description": "最大买入"
+          },
+          "table_type": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "tournament"
+            ],
+            "description": "桌子类型"
+          }
+        },
+        "required": [
+          "name",
+          "room_type",
+          "small_blind",
+          "big_blind",
+          "max_players",
+          "table_type"
+        ]
+      },
+      "PlayerSession": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "玩家牌局会话ID"
+          },
+          "session_id": {
+            "type": "string",
+            "description": "游戏会话ID"
+          },
+          "player_id": {
+            "type": "string",
+            "description": "玩家ID"
+          },
+          "hole_cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Card"
+            },
+            "description": "玩家手牌"
+          },
+          "chips_in_pot": {
+            "type": "number",
+            "description": "玩家已投入底池的筹码"
+          },
+          "chips_remaining": {
+            "type": "number",
+            "description": "玩家剩余筹码"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "folded",
+              "all_in",
+              "out"
+            ],
+            "description": "玩家状态"
+          },
+          "position": {
+            "type": "string",
+            "enum": [
+              "sb",
+              "bb",
+              "utg",
+              "mp",
+              "co",
+              "btn"
+            ],
+            "description": "玩家位置"
+          },
+          "seat_number": {
+            "type": "number",
+            "description": "玩家座位编号"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "player_id",
+          "hole_cards",
+          "chips_in_pot",
+          "chips_remaining",
+          "status",
+          "position",
+          "seat_number"
+        ]
+      },
+      "Card": {
+        "type": "object",
+        "properties": {
+          "suit": {
+            "type": "string",
+            "enum": [
+              "hearts",
+              "diamonds",
+              "clubs",
+              "spades"
+            ],
+            "description": "卡牌花色"
+          },
+          "rank": {
+            "type": "string",
+            "enum": [
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              "J",
+              "Q",
+              "K",
+              "A"
+            ],
+            "description": "卡牌点数"
+          }
+        },
+        "required": [
+          "suit",
+          "rank"
+        ]
+      },
+      "FriendRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "请求ID"
+          },
+          "from_user_id": {
+            "type": "string",
+            "description": "发送者ID"
+          },
+          "to_user_id": {
+            "type": "string",
+            "description": "接收者ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "rejected"
+            ],
+            "description": "请求状态"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        },
+        "required": [
+          "id",
+          "from_user_id",
+          "to_user_id",
+          "status",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "Friend": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "关系ID"
+          },
+          "user_id": {
+            "type": "string",
+            "description": "用户ID"
+          },
+          "friend_id": {
+            "type": "string",
+            "description": "好友ID"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "friend_id",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "PrivateMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "消息ID"
+          },
+          "sender_id": {
+            "type": "string",
+            "description": "发送者ID"
+          },
+          "receiver_id": {
+            "type": "string",
+            "description": "接收者ID"
+          },
+          "content": {
+            "type": "string",
+            "description": "消息内容"
+          },
+          "read": {
+            "type": "boolean",
+            "description": "是否已读"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        },
+        "required": [
+          "id",
+          "sender_id",
+          "receiver_id",
+          "content",
+          "read",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/ai/{gameId}/analyze-hand": {
+      "post": {
+        "summary": "获取牌力评估",
+        "tags": [
+          "AI"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gameId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "游戏ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "holeCards": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "手牌"
+                  },
+                  "communityCards": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "公共牌"
+                  },
+                  "betHistory": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "下注历史"
+                  },
+                  "potSize": {
+                    "type": "number",
+                    "description": "底池大小"
+                  },
+                  "currentBet": {
+                    "type": "number",
+                    "description": "当前下注金额"
+                  },
+                  "stackSize": {
+                    "type": "number",
+                    "description": "玩家筹码"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "牌力评估成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "analysis": {
+                      "type": "object"
+                    },
+                    "handStrength": {
+                      "type": "number"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/ai/{gameId}/suggestions": {
+      "get": {
+        "summary": "获取AI建议",
+        "tags": [
+          "AI"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gameId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "游戏ID"
+          },
+          {
+            "in": "query",
+            "name": "style",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "gto",
+                "professional"
+              ]
+            },
+            "description": "AI风格"
+          },
+          {
+            "in": "query",
+            "name": "hand",
+            "schema": {
+              "type": "string"
+            },
+            "description": "手牌（JSON格式）"
+          },
+          {
+            "in": "query",
+            "name": "communityCards",
+            "schema": {
+              "type": "string"
+            },
+            "description": "公共牌（JSON格式）"
+          },
+          {
+            "in": "query",
+            "name": "betHistory",
+            "schema": {
+              "type": "string"
+            },
+            "description": "下注历史（JSON格式）"
+          },
+          {
+            "in": "query",
+            "name": "potSize",
+            "schema": {
+              "type": "number"
+            },
+            "description": "底池大小"
+          },
+          {
+            "in": "query",
+            "name": "currentBet",
+            "schema": {
+              "type": "number"
+            },
+            "description": "当前下注金额"
+          },
+          {
+            "in": "query",
+            "name": "stackSize",
+            "schema": {
+              "type": "number"
+            },
+            "description": "玩家筹码"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取AI建议成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "suggestion": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/ai/train": {
+      "post": {
+        "summary": "AI训练",
+        "tags": [
+          "AI"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "trainingData": {
+                    "type": "object",
+                    "description": "训练数据"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI训练成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "trainingData": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/ai/batch-train": {
+      "post": {
+        "summary": "AI批量训练",
+        "tags": [
+          "AI"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "trainingDataList": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "sessionId": {
+                          "type": "string"
+                        },
+                        "holeCards": {
+                          "type": "array"
+                        },
+                        "communityCards": {
+                          "type": "array"
+                        },
+                        "handStrength": {
+                          "type": "number"
+                        },
+                        "recommendedAction": {
+                          "type": "string"
+                        },
+                        "actualAction": {
+                          "type": "string"
+                        },
+                        "actionResult": {
+                          "type": "string"
+                        },
+                        "contextData": {
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "description": "训练数据列表"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI批量训练成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "trainingIds": {
+                      "type": "array"
+                    },
+                    "metrics": {
+                      "type": "object"
+                    },
+                    "totalData": {
+                      "type": "number"
+                    },
+                    "processedData": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/ai/{gameId}/calculate-odds": {
+      "post": {
+        "summary": "获取赔率计算",
+        "tags": [
+          "AI"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gameId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "游戏ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "holeCards": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "手牌"
+                  },
+                  "communityCards": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "公共牌"
+                  },
+                  "remainingPlayers": {
+                    "type": "number",
+                    "description": "剩余玩家数"
+                  },
+                  "potSize": {
+                    "type": "number",
+                    "description": "底池大小"
+                  },
+                  "currentBet": {
+                    "type": "number",
+                    "description": "当前下注金额"
+                  },
+                  "expectedFutureBets": {
+                    "type": "number",
+                    "description": "预期未来下注"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "赔率计算成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "winningOdds": {
+                      "type": "number"
+                    },
+                    "potOdds": {
+                      "type": "number"
+                    },
+                    "impliedOdds": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/ai/{gameId}/analyze-opponent/{opponentId}": {
+      "get": {
+        "summary": "对手行为分析",
+        "tags": [
+          "AI"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gameId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "游戏ID"
+          },
+          {
+            "in": "path",
+            "name": "opponentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "对手ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "对手行为分析成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "opponentId": {
+                      "type": "string"
+                    },
+                    "analysis": {
+                      "type": "object",
+                      "properties": {
+                        "playingStyle": {
+                          "type": "string"
+                        },
+                        "bluffFrequency": {
+                          "type": "number"
+                        },
+                        "callFrequency": {
+                          "type": "number"
+                        },
+                        "raiseFrequency": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/ai/{gameId}/set-mode": {
+      "post": {
+        "summary": "设置AI模式",
+        "tags": [
+          "AI"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gameId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "游戏ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "description": "AI模式"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI模式设置成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "gameId": {
+                      "type": "string"
+                    },
+                    "mode": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/ai/opponents": {
+      "get": {
+        "summary": "获取所有可用的AI对手",
+        "tags": [
+          "AI"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取AI对手列表成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "opponents": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "level": {
+                            "type": "string"
+                          },
+                          "playingStyle": {
+                            "type": "string"
+                          },
+                          "bluffFrequency": {
+                            "type": "number"
+                          },
+                          "callFrequency": {
+                            "type": "number"
+                          },
+                          "raiseFrequency": {
+                            "type": "number"
+                          },
+                          "handRange": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/ai/opponent/{opponentId}/hand": {
+      "get": {
+        "summary": "为AI对手生成手牌",
+        "tags": [
+          "AI"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "opponentId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "AI对手ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "生成AI对手手牌成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "opponentId": {
+                      "type": "string"
+                    },
+                    "hand": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "suit": {
+                            "type": "string"
+                          },
+                          "rank": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "AI对手不存在"
+          }
+        }
+      }
+    },
+    "/ai/opponent/decision": {
+      "post": {
+        "summary": "获取AI对手的决策",
+        "tags": [
+          "AI"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "opponentState": {
+                    "type": "object",
+                    "properties": {
+                      "opponentId": {
+                        "type": "string"
+                      },
+                      "hand": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "suit": {
+                              "type": "string"
+                            },
+                            "rank": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "stackSize": {
+                        "type": "number"
+                      },
+                      "betHistory": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "action_type": {
+                              "type": "string"
+                            },
+                            "amount": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      },
+                      "position": {
+                        "type": "number"
+                      },
+                      "folded": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "communityCards": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "suit": {
+                          "type": "string"
+                        },
+                        "rank": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "potSize": {
+                    "type": "number"
+                  },
+                  "currentBet": {
+                    "type": "number"
+                  },
+                  "minRaise": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "获取AI对手决策成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "decision": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "string"
+                        },
+                        "amount": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/games/{gameId}/action": {
+      "post": {
+        "summary": "执行游戏动作（下注、跟注、弃牌等）",
+        "tags": [
+          "Games"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gameId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "游戏ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "fold",
+                      "check",
+                      "call",
+                      "raise",
+                      "allin"
+                    ],
+                    "description": "游戏动作类型"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "description": "下注金额（仅在raise动作时需要）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "游戏动作执行成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/games/{gameId}/history": {
+      "get": {
+        "summary": "获取牌局历史",
+        "tags": [
+          "Games"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gameId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "游戏ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取牌局历史成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "gameId": {
+                          "type": "string"
+                        },
+                        "actions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/games/stats": {
+      "get": {
+        "summary": "获取用户游戏统计",
+        "tags": [
+          "Games"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取游戏统计成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "gamesPlayed": {
+                          "type": "number"
+                        },
+                        "gamesWon": {
+                          "type": "number"
+                        },
+                        "winRate": {
+                          "type": "number"
+                        },
+                        "totalChips": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/games/{gameId}": {
+      "get": {
+        "summary": "获取当前牌局状态",
+        "tags": [
+          "Games"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gameId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "游戏ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取牌局状态成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "gameId": {
+                          "type": "string"
+                        },
+                        "players": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "communityCards": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "currentPlayer": {
+                          "type": "string"
+                        },
+                        "round": {
+                          "type": "string"
+                        },
+                        "pot": {
+                          "type": "number"
+                        },
+                        "actions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/games/{gameId}/start": {
+      "post": {
+        "summary": "开始新牌局",
+        "tags": [
+          "Games"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gameId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "游戏ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "新牌局开始成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "gameId": {
+                          "type": "string"
+                        },
+                        "players": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "communityCards": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "currentPlayer": {
+                          "type": "string"
+                        },
+                        "round": {
+                          "type": "string"
+                        },
+                        "pot": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/games/{gameId}/ai/analysis": {
+      "post": {
+        "summary": "请求AI分析",
+        "tags": [
+          "Games"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gameId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "游戏ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "playerCards": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "手牌",
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "communityCards": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "公共牌"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI分析成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "gameId": {
+                          "type": "string"
+                        },
+                        "playerCards": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "communityCards": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "analysis": {
+                          "type": "object",
+                          "properties": {
+                            "handStrength": {
+                              "type": "number"
+                            },
+                            "winningOdds": {
+                              "type": "number"
+                            },
+                            "recommendedAction": {
+                              "type": "string"
+                            },
+                            "potOdds": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/rooms": {
+      "post": {
+        "summary": "创建房间",
+        "tags": [
+          "Rooms"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "maxPlayers": {
+                    "type": "number"
+                  },
+                  "buyIn": {
+                    "type": "number"
+                  },
+                  "smallBlind": {
+                    "type": "number"
+                  },
+                  "bigBlind": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "房间创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "room": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "hostId": {
+                          "type": "string"
+                        },
+                        "players": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "maxPlayers": {
+                          "type": "number"
+                        },
+                        "buyIn": {
+                          "type": "number"
+                        },
+                        "smallBlind": {
+                          "type": "number"
+                        },
+                        "bigBlind": {
+                          "type": "number"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "创建房间失败"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      },
+      "get": {
+        "summary": "获取房间列表",
+        "tags": [
+          "Rooms"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            },
+            "description": "房间状态筛选"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取房间列表成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "rooms": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "hostId": {
+                            "type": "string"
+                          },
+                          "playerCount": {
+                            "type": "number"
+                          },
+                          "maxPlayers": {
+                            "type": "number"
+                          },
+                          "buyIn": {
+                            "type": "number"
+                          },
+                          "smallBlind": {
+                            "type": "number"
+                          },
+                          "bigBlind": {
+                            "type": "number"
+                          },
+                          "status": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "获取房间列表失败"
+          }
+        }
+      }
+    },
+    "/rooms/validate-password/{roomId}": {
+      "post": {
+        "summary": "验证私人房间密码",
+        "tags": [
+          "Rooms"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "房间ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "description": "房间密码"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "密码验证成功"
+          },
+          "401": {
+            "description": "密码错误或未授权"
+          },
+          "404": {
+            "description": "房间不存在"
+          }
+        }
+      }
+    },
+    "/rooms/{roomId}": {
+      "put": {
+        "summary": "更新房间信息",
+        "tags": [
+          "Rooms"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "房间ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "small_blind": {
+                    "type": "number"
+                  },
+                  "big_blind": {
+                    "type": "number"
+                  },
+                  "max_players": {
+                    "type": "number"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "min_buy_in": {
+                    "type": "number"
+                  },
+                  "max_buy_in": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "房间更新成功"
+          },
+          "401": {
+            "description": "未授权或不是房间所有者"
+          },
+          "404": {
+            "description": "房间不存在"
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除房间",
+        "tags": [
+          "Rooms"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "房间ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "房间删除成功"
+          },
+          "401": {
+            "description": "未授权或不是房间所有者"
+          },
+          "404": {
+            "description": "房间不存在"
+          }
+        }
+      },
+      "get": {
+        "summary": "获取房间详情",
+        "tags": [
+          "Rooms"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "房间ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取房间详情成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "room": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "hostId": {
+                          "type": "string"
+                        },
+                        "players": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "maxPlayers": {
+                          "type": "number"
+                        },
+                        "buyIn": {
+                          "type": "number"
+                        },
+                        "smallBlind": {
+                          "type": "number"
+                        },
+                        "bigBlind": {
+                          "type": "number"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "获取房间详情失败"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "房间不存在"
+          }
+        }
+      }
+    },
+    "/rooms/user/created": {
+      "get": {
+        "summary": "获取用户创建的房间列表",
+        "tags": [
+          "Rooms"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取用户创建的房间列表成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "rooms": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GameRoom"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "获取房间列表失败"
+          }
+        }
+      }
+    },
+    "/rooms/{roomId}/join": {
+      "post": {
+        "summary": "加入房间",
+        "tags": [
+          "Rooms"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "房间ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "加入房间成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "加入房间失败"
+          },
+          "401": {
+            "description": "未授权或密码错误"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "description": "私人房间密码"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rooms/{roomId}/leave": {
+      "post": {
+        "summary": "离开房间",
+        "tags": [
+          "Rooms"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "房间ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "离开房间成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "离开房间失败"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/social/friend-requests": {
+      "post": {
+        "summary": "发送好友请求",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "toUserId": {
+                    "type": "string",
+                    "description": "接收者用户ID"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "好友请求发送成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/friend-requests/{id}/respond": {
+      "post": {
+        "summary": "响应好友请求",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "好友请求ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "accepted",
+                      "rejected"
+                    ],
+                    "description": "响应状态"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "响应成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/friend-requests/received": {
+      "get": {
+        "summary": "获取收到的好友请求",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "accepted",
+                "rejected"
+              ]
+            },
+            "description": "请求状态"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "好友请求列表"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/friend-requests/sent": {
+      "get": {
+        "summary": "获取发送的好友请求",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "accepted",
+                "rejected"
+              ]
+            },
+            "description": "请求状态"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "好友请求列表"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/friend-requests/{id}": {
+      "delete": {
+        "summary": "删除好友请求",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "好友请求ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/friends": {
+      "get": {
+        "summary": "获取好友列表",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "好友列表"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/friends/{friendId}": {
+      "delete": {
+        "summary": "删除好友",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "friendId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "好友ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/friends/check/{friendId}": {
+      "get": {
+        "summary": "检查是否是好友",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "friendId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "好友ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "检查结果"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/messages": {
+      "post": {
+        "summary": "发送私信",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "receiverId": {
+                    "type": "string",
+                    "description": "接收者ID"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "消息内容"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "消息发送成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/messages/{otherUserId}": {
+      "get": {
+        "summary": "获取与某个用户的私信历史",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "otherUserId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "对方用户ID"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "number"
+            },
+            "description": "限制数量"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "number"
+            },
+            "description": "偏移量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "私信历史列表"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/messages/unread-count": {
+      "get": {
+        "summary": "获取未读私信数量",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "未读消息数量"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/messages/read": {
+      "post": {
+        "summary": "标记私信为已读",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messageIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "消息ID列表"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "标记成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/social/messages/{otherUserId}/read-all": {
+      "post": {
+        "summary": "标记与某个用户的所有私信为已读",
+        "tags": [
+          "Social"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "otherUserId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "对方用户ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "标记成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/tournaments": {
+      "post": {
+        "summary": "创建新的锦标赛",
+        "tags": [
+          "Tournaments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "锦标赛名称"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "锦标赛描述"
+                  },
+                  "buy_in": {
+                    "type": "number",
+                    "description": "买入费用"
+                  },
+                  "max_players": {
+                    "type": "number",
+                    "description": "最大玩家数量"
+                  },
+                  "start_time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "开始时间"
+                  },
+                  "blind_structure_id": {
+                    "type": "string",
+                    "description": "盲注结构ID"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "锦标赛创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tournament"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      },
+      "get": {
+        "summary": "获取锦标赛列表",
+        "tags": [
+          "Tournaments"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "registration",
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "description": "锦标赛状态"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "number"
+            },
+            "description": "限制返回数量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "锦标赛列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tournament"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/tournaments/{id}": {
+      "get": {
+        "summary": "获取锦标赛详情",
+        "tags": [
+          "Tournaments"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "锦标赛ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "锦标赛详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tournament"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "锦标赛不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/tournaments/{id}/register": {
+      "post": {
+        "summary": "注册参加锦标赛",
+        "tags": [
+          "Tournaments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "锦标赛ID"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "注册成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "锦标赛不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      },
+      "delete": {
+        "summary": "取消锦标赛注册",
+        "tags": [
+          "Tournaments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "锦标赛ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消注册成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "注册信息不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/tournaments/{id}/start": {
+      "post": {
+        "summary": "开始锦标赛",
+        "tags": [
+          "Tournaments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "锦标赛ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "锦标赛开始成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "锦标赛不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/tournaments/user": {
+      "get": {
+        "summary": "获取用户注册的锦标赛",
+        "tags": [
+          "Tournaments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "用户注册的锦标赛列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tournament"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/tournaments/{id}/rankings": {
+      "get": {
+        "summary": "获取锦标赛排名",
+        "tags": [
+          "Tournaments"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "锦标赛ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "锦标赛排名列表"
+          },
+          "404": {
+            "description": "锦标赛不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/tournaments/default-blind-structure": {
+      "post": {
+        "summary": "创建默认盲注结构",
+        "tags": [
+          "Tournaments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "默认盲注结构创建成功"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/users/register": {
+      "post": {
+        "summary": "用户注册",
+        "tags": [
+          "Users"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterUserInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "用户注册成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "注册失败"
+          }
+        }
+      }
+    },
+    "/users/login": {
+      "post": {
+        "summary": "用户登录",
+        "tags": [
+          "Users"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginUserInput"
+              },
+              "example": {
+                "username": "exampleuser",
+                "password": "password123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "登录失败"
+          }
+        }
+      }
+    },
+    "/users/profile": {
+      "get": {
+        "summary": "获取用户资料",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取用户资料成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权或获取用户资料失败"
+          },
+          "404": {
+            "description": "用户不存在"
+          }
+        }
+      },
+      "put": {
+        "summary": "更新用户资料",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "avatar": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新用户资料成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "更新用户资料失败"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/users/stats": {
+      "get": {
+        "summary": "获取用户统计数据",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取用户统计数据成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "gamesPlayed": {
+                          "type": "number"
+                        },
+                        "gamesWon": {
+                          "type": "number"
+                        },
+                        "winRate": {
+                          "type": "number"
+                        },
+                        "totalChips": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "获取用户统计数据失败"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "AI",
+      "description": "AI分析相关API"
+    },
+    {
+      "name": "Rooms",
+      "description": "房间管理相关API"
+    },
+    {
+      "name": "Social",
+      "description": "社交功能相关API"
+    },
+    {
+      "name": "Tournaments",
+      "description": "锦标赛管理相关API"
+    },
+    {
+      "name": "Users",
+      "description": "用户管理相关API"
+    }
+  ]
+}

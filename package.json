@@ -1,0 +1,47 @@
+{
+  "name": "poker-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Poker game monorepo with frontend, backend, and shared packages",
+  "scripts": {
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:shared": "pnpm --filter shared dev",
+    "dev:all": "pnpm run dev:frontend & pnpm run dev:backend",
+    "build:frontend": "pnpm --filter frontend build",
+    "build:backend": "pnpm --filter backend build",
+    "build:shared": "pnpm --filter shared build",
+    "build:all": "pnpm run build:shared && pnpm run build:frontend && pnpm run build:backend",
+    "install:all": "pnpm install",
+    "install:clean": "rm -rf **/node_modules **/package-lock.json **/pnpm-lock.yaml && pnpm install",
+    "test:frontend": "pnpm --filter frontend test",
+    "test:backend": "pnpm --filter backend test",
+    "test:shared": "pnpm --filter shared test",
+    "test:all": "pnpm run test:shared && pnpm run test:frontend && pnpm run test:backend",
+    "test:coverage": "pnpm run test:shared --coverage && pnpm run test:frontend --coverage && pnpm run test:backend --coverage",
+    "lint:frontend": "pnpm --filter frontend lint",
+    "lint:backend": "pnpm --filter backend lint",
+    "lint:shared": "pnpm --filter shared lint",
+    "lint:all": "pnpm run lint:shared && pnpm run lint:frontend && pnpm run lint:backend",
+    "format": "prettier --write ."
+  },
+  "keywords": [
+    "poker",
+    "monorepo",
+    "frontend",
+    "backend"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "prettier": "^3.0.0"
+  },
+  "workspaces": [
+    "packages/frontend",
+    "packages/backend",
+    "packages/shared"
+  ],
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

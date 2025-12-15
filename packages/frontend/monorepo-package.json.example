@@ -1,0 +1,22 @@
+# monorepo根目录package.json示例
+# 将此文件放在 /Users/xingkaihan/Documents/Code/wpk/ 目录下
+
+{
+  "name": "poker-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Poker game monorepo with frontend and backend",
+  "type": "module",
+  "scripts": {
+    "dev:frontend": "pnpm --filter poker-frontend dev",
+    "dev:backend": "pnpm --filter poker-backend dev",
+    "build:frontend": "pnpm --filter poker-frontend build",
+    "build:backend": "pnpm --filter poker-backend build",
+    "test:frontend": "pnpm --filter poker-frontend test",
+    "test:backend": "pnpm --filter poker-backend test",
+    "install:all": "pnpm install"
+  },
+  "keywords": ["poker", "monorepo"],
+  "author": "",
+  "license": "MIT"
+}

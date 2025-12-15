@@ -1,0 +1,330 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.postgreSQLRoomDAO = exports.PostgreSQLRoomDAO = void 0;
+const database_1 = __importDefault(require("../../services/database"));
+const redisCache_1 = require("../../services/redisCache");
+const loggerService_1 = __importDefault(require("../../services/loggerService"));
+class PostgreSQLRoomDAO {
+    // 这个方法与接口定义不匹配，应该由createRoom方法代替
+    async create(entity) {
+        try {
+            const result = await database_1.default.query(`INSERT INTO ${PostgreSQLRoomDAO.TABLE_NAME} (name, room_type, small_blind, big_blind, max_players, current_players, game_status, owner_id, password, min_buy_in, max_buy_in, table_type) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`, [entity.name, entity.room_type, entity.small_blind, entity.big_blind, entity.max_players, entity.current_players || 0, entity.game_status || 'waiting', entity.owner_id, entity.password, entity.min_buy_in, entity.max_buy_in, entity.table_type || 'cash']);
+            const room = result.rows[0];
+            loggerService_1.default.info('创建房间成功', { roomId: room.id, ownerId: entity.owner_id });
+            // 缓存房间详情
+            await redisCache_1.RedisCache.set(`${PostgreSQLRoomDAO.CACHE_KEY_PREFIX}${room.id}`, room, 3600);
+            // 更新房间列表缓存
+            await this.invalidateRoomListCache();
+            return room;
+        }
+        catch (error) {
+            loggerService_1.default.error('创建房间失败', { error, entity });
+            throw error;
+        }
+    }
+    async getById(id) {
+        try {
+            // 先从缓存获取
+            const cachedRoom = await redisCache_1.RedisCache.get(`${PostgreSQLRoomDAO.CACHE_KEY_PREFIX}${id}`);
+            if (cachedRoom) {
+                loggerService_1.default.debug('从缓存获取房间信息成功', { roomId: id });
+                return cachedRoom;
+            }
+            const result = await database_1.default.query(`SELECT * FROM ${PostgreSQLRoomDAO.TABLE_NAME} WHERE id = $1`, [id]);
+            if (result.rows.length === 0) {
+                loggerService_1.default.info('房间不存在', { roomId: id });
+                return null;
+            }
+            const room = result.rows[0];
+            // 缓存房间详情
+            await redisCache_1.RedisCache.set(`${PostgreSQLRoomDAO.CACHE_KEY_PREFIX}${room.id}`, room, 3600);
+            loggerService_1.default.debug('从数据库获取房间信息成功', { roomId: id });
+            return room;
+        }
+        catch (error) {
+            loggerService_1.default.error('获取房间信息失败', { error, roomId: id });
+            throw error;
+        }
+    }
+    async update(id, entity) {
+        try {
+            // 构建更新语句
+            const updateFields = Object.entries(entity)
+                .map(([key, value], index) => `${key} = $${index + 2}`)
+                .join(', ');
+            const values = [...Object.values(entity), id];
+            const result = await database_1.default.query(`UPDATE ${PostgreSQLRoomDAO.TABLE_NAME} SET ${updateFields}, updated_at = NOW()
+         WHERE id = $${values.length} RETURNING *`, values);
+            if (result.rows.length === 0) {
+                loggerService_1.default.info('更新房间失败：房间不存在', { roomId: id, updateEntity: entity });
+                return null;
+            }
+            const room = result.rows[0];
+            // 更新缓存
+            await redisCache_1.RedisCache.set(`${PostgreSQLRoomDAO.CACHE_KEY_PREFIX}${room.id}`, room, 3600);
+            // 更新房间列表缓存
+            await this.invalidateRoomListCache();
+            loggerService_1.default.info('更新房间成功', { roomId: id, updateEntity: entity });
+            return room;
+        }
+        catch (error) {
+            loggerService_1.default.error('更新房间失败', { error, roomId: id, updateEntity: entity });
+            throw error;
+        }
+    }
+    async delete(id) {
+        try {
+            const result = await database_1.default.query(`DELETE FROM ${PostgreSQLRoomDAO.TABLE_NAME} WHERE id = $1`, [id]);
+            if (result.rowCount === 0) {
+                loggerService_1.default.info('删除房间失败：房间不存在', { roomId: id });
+                return false;
+            }
+            // 删除缓存
+            await redisCache_1.RedisCache.delete(`${PostgreSQLRoomDAO.CACHE_KEY_PREFIX}${id}`);
+            // 更新房间列表缓存
+            await this.invalidateRoomListCache();
+            loggerService_1.default.info('删除房间成功', { roomId: id });
+            return true;
+        }
+        catch (error) {
+            loggerService_1.default.error('删除房间失败', { error, roomId: id });
+            throw error;
+        }
+    }
+    async getAll() {
+        try {
+            // 先从缓存获取
+            const cachedRooms = await redisCache_1.RedisCache.get('rooms:all');
+            if (cachedRooms) {
+                loggerService_1.default.debug('从缓存获取所有房间列表成功', { count: cachedRooms.length });
+                return cachedRooms;
+            }
+            const result = await database_1.default.query(`SELECT * FROM ${PostgreSQLRoomDAO.TABLE_NAME}`);
+            // 缓存房间列表
+            await redisCache_1.RedisCache.set('rooms:all', result.rows, 300);
+            loggerService_1.default.info('从数据库获取所有房间列表成功', { count: result.rows.length });
+            return result.rows;
+        }
+        catch (error) {
+            loggerService_1.default.error('获取所有房间列表失败', { error });
+            throw error;
+        }
+    }
+    async getPublicRooms() {
+        try {
+            // 先从缓存获取
+            const cachedRooms = await redisCache_1.RedisCache.get('rooms:public');
+            if (cachedRooms) {
+                loggerService_1.default.debug('从缓存获取公共房间列表成功', { count: cachedRooms.length });
+                return cachedRooms;
+            }
+            const result = await database_1.default.query(`SELECT * FROM ${PostgreSQLRoomDAO.TABLE_NAME} WHERE room_type = $1`, ['public']);
+            // 缓存公共房间列表
+            await redisCache_1.RedisCache.set('rooms:public', result.rows, 300);
+            loggerService_1.default.info('从数据库获取公共房间列表成功', { count: result.rows.length });
+            return result.rows;
+        }
+        catch (error) {
+            loggerService_1.default.error('获取公共房间列表失败', { error });
+            throw error;
+        }
+    }
+    async getRoomsByOwner(ownerId) {
+        try {
+            const result = await database_1.default.query(`SELECT * FROM ${PostgreSQLRoomDAO.TABLE_NAME} WHERE owner_id = $1`, [ownerId]);
+            loggerService_1.default.info('获取用户创建的房间列表成功', { ownerId, count: result.rows.length });
+            return result.rows;
+        }
+        catch (error) {
+            loggerService_1.default.error('获取用户创建的房间列表失败', { error, ownerId });
+            throw error;
+        }
+    }
+    async getRoomsByStatus(status) {
+        try {
+            // 先从缓存获取
+            const cachedRooms = await redisCache_1.RedisCache.get(`rooms:status:${status}`);
+            if (cachedRooms) {
+                loggerService_1.default.debug('从缓存获取指定状态的房间列表成功', { status, count: cachedRooms.length });
+                return cachedRooms;
+            }
+            const result = await database_1.default.query(`SELECT * FROM ${PostgreSQLRoomDAO.TABLE_NAME} WHERE game_status = $1`, [status]);
+            // 缓存指定状态的房间列表
+            await redisCache_1.RedisCache.set(`rooms:status:${status}`, result.rows, 300);
+            loggerService_1.default.info('从数据库获取指定状态的房间列表成功', { status, count: result.rows.length });
+            return result.rows;
+        }
+        catch (error) {
+            loggerService_1.default.error('获取指定状态的房间列表失败', { error, status });
+            throw error;
+        }
+    }
+    async createRoom(input, ownerId) {
+        try {
+            const { name, room_type, small_blind, big_blind, max_players, password, min_buy_in, max_buy_in, table_type } = input;
+            const result = await database_1.default.query(`INSERT INTO ${PostgreSQLRoomDAO.TABLE_NAME} (name, room_type, small_blind, big_blind, max_players, owner_id, password, min_buy_in, max_buy_in, table_type) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`, [name, room_type, small_blind, big_blind, max_players, ownerId, password, min_buy_in, max_buy_in, table_type || 'cash']);
+            const room = result.rows[0];
+            loggerService_1.default.info('创建房间成功', { roomId: room.id, ownerId, roomName: name });
+            // 缓存房间详情
+            await redisCache_1.RedisCache.set(`${PostgreSQLRoomDAO.CACHE_KEY_PREFIX}${room.id}`, room, 3600);
+            // 更新房间列表缓存
+            await this.invalidateRoomListCache();
+            return room;
+        }
+        catch (error) {
+            loggerService_1.default.error('创建房间失败', { error, ownerId, input });
+            throw error;
+        }
+    }
+    async updatePlayerCount(roomId, delta) {
+        try {
+            const result = await database_1.default.query(`UPDATE ${PostgreSQLRoomDAO.TABLE_NAME} SET current_players = GREATEST(current_players + $1, 0), updated_at = NOW()
+         WHERE id = $2 RETURNING *`, [delta, roomId]);
+            if (result.rows.length === 0) {
+                loggerService_1.default.info('更新房间玩家数量失败：房间不存在', { roomId, delta });
+                return null;
+            }
+            const room = result.rows[0];
+            loggerService_1.default.info('更新房间玩家数量成功', { roomId, previousCount: room.current_players - delta, newCount: room.current_players, delta });
+            // 更新缓存
+            await redisCache_1.RedisCache.set(`${PostgreSQLRoomDAO.CACHE_KEY_PREFIX}${room.id}`, room, 3600);
+            // 更新房间列表缓存
+            await this.invalidateRoomListCache();
+            return room;
+        }
+        catch (error) {
+            loggerService_1.default.error('更新房间玩家数量失败', { error, roomId, delta });
+            throw error;
+        }
+    }
+    async updateStatus(roomId, status) {
+        return this.update(roomId, { game_status: status });
+    }
+    // 加入房间
+    async joinRoom(roomId, userId) {
+        try {
+            // 检查房间是否存在且未满
+            const room = await this.getById(roomId);
+            if (!room) {
+                loggerService_1.default.info('加入房间失败：房间不存在', { userId, roomId });
+                return false;
+            }
+            if (room.current_players >= room.max_players) {
+                loggerService_1.default.info('加入房间失败：房间已满', { userId, roomId, currentPlayers: room.current_players, maxPlayers: room.max_players });
+                return false;
+            }
+            // 获取当前游戏会话
+            const sessionResult = await database_1.default.query(`SELECT * FROM game_sessions WHERE room_id = $1 AND status = $2`, [roomId, 'waiting']);
+            let sessionId;
+            if (sessionResult.rows.length === 0) {
+                // 如果没有等待中的会话，创建一个新会话
+                const createSessionResult = await database_1.default.query(`INSERT INTO game_sessions (room_id, status) VALUES ($1, $2) RETURNING id`, [roomId, 'waiting']);
+                if (createSessionResult.rows.length === 0) {
+                    loggerService_1.default.error('加入房间失败：创建游戏会话失败', { userId, roomId });
+                    throw new Error('创建游戏会话失败');
+                }
+                sessionId = createSessionResult.rows[0].id;
+                loggerService_1.default.info('创建新游戏会话成功', { sessionId, roomId });
+            }
+            else {
+                // 使用现有的会话
+                sessionId = sessionResult.rows[0].id;
+                loggerService_1.default.debug('使用现有游戏会话', { sessionId, roomId });
+            }
+            // 检查用户是否已经在任何房间中
+            const anyRoomResult = await database_1.default.query(`SELECT sp.session_id, gs.room_id FROM session_players sp
+         JOIN game_sessions gs ON sp.session_id = gs.id
+         WHERE sp.user_id = $1 AND gs.status IN ($2, $3)`, [userId, 'waiting', 'playing']);
+            if (anyRoomResult.rows.length > 0) {
+                const existingRoomId = anyRoomResult.rows[0].room_id;
+                loggerService_1.default.info('加入房间失败：用户已经在其他房间中', { userId, requestedRoomId: roomId, existingRoomId });
+                return false;
+            }
+            // 检查用户是否已经在当前会话中
+            const playerResult = await database_1.default.query(`SELECT * FROM session_players WHERE session_id = $1 AND user_id = $2`, [sessionId, userId]);
+            if (playerResult.rows.length > 0) {
+                loggerService_1.default.info('加入房间失败：用户已经在房间中', { userId, roomId, sessionId });
+                return false;
+            }
+            // 获取已用座位
+            const seatResult = await database_1.default.query(`SELECT seat_number FROM session_players WHERE session_id = $1 ORDER BY seat_number ASC`, [sessionId]);
+            const takenSeats = seatResult.rows.map(row => row.seat_number);
+            // 分配新座位
+            let seatNumber = 1;
+            while (takenSeats.includes(seatNumber)) {
+                seatNumber++;
+            }
+            // 将用户添加到会话中
+            await database_1.default.query(`INSERT INTO session_players (session_id, user_id, seat_number, chips, is_active)
+         VALUES ($1, $2, $3, $4, $5)`, [sessionId, userId, seatNumber, 10000, true]);
+            await this.updatePlayerCount(roomId, 1);
+            loggerService_1.default.info('加入房间成功', { userId, roomId, sessionId, seatNumber });
+            return true;
+        }
+        catch (error) {
+            loggerService_1.default.error('加入房间失败', { error, userId, roomId });
+            return false;
+        }
+    }
+    // 离开房间
+    async leaveRoom(roomId, userId) {
+        try {
+            // 获取当前游戏会话
+            const sessionResult = await database_1.default.query(`SELECT * FROM game_sessions WHERE room_id = $1 AND status IN ($2, $3)`, [roomId, 'waiting', 'playing']);
+            if (sessionResult.rows.length === 0) {
+                loggerService_1.default.info('离开房间失败：房间没有活跃会话', { userId, roomId });
+                return false;
+            }
+            const sessionId = sessionResult.rows[0].id;
+            // 检查用户是否在会话中
+            const playerResult = await database_1.default.query(`SELECT * FROM session_players WHERE session_id = $1 AND user_id = $2`, [sessionId, userId]);
+            if (playerResult.rows.length === 0) {
+                loggerService_1.default.info('离开房间失败：用户不在房间中', { userId, roomId, sessionId });
+                return false;
+            }
+            // 从会话中移除用户
+            await database_1.default.query(`DELETE FROM session_players WHERE session_id = $1 AND user_id = $2`, [sessionId, userId]);
+            await this.updatePlayerCount(roomId, -1);
+            loggerService_1.default.info('离开房间成功', { userId, roomId, sessionId });
+            return true;
+        }
+        catch (error) {
+            loggerService_1.default.error('离开房间失败', { error, userId, roomId });
+            return false;
+        }
+    }
+    // 检查用户当前所在房间
+    async getUserCurrentRoom(userId) {
+        try {
+            const result = await database_1.default.query(`SELECT gs.room_id 
+         FROM session_players sp 
+         JOIN game_sessions gs ON sp.session_id = gs.id 
+         WHERE sp.user_id = $1 AND gs.status IN ($2, $3)`, [userId, 'waiting', 'playing']);
+            if (result.rows.length > 0) {
+                loggerService_1.default.info('用户当前在房间中', { userId, roomId: result.rows[0].room_id });
+                return result.rows[0].room_id;
+            }
+            loggerService_1.default.info('用户当前不在任何房间中', { userId });
+            return null;
+        }
+        catch (error) {
+            loggerService_1.default.error('获取用户当前房间失败', { error, userId });
+            throw error;
+        }
+    }
+    // 清除房间列表相关缓存
+    async invalidateRoomListCache() {
+        await redisCache_1.RedisCache.deleteBatch(['rooms:all', 'rooms:public', 'rooms:status:waiting', 'rooms:status:playing', 'rooms:status:finished']);
+    }
+}
+exports.PostgreSQLRoomDAO = PostgreSQLRoomDAO;
+PostgreSQLRoomDAO.TABLE_NAME = 'game_rooms';
+PostgreSQLRoomDAO.CACHE_KEY_PREFIX = 'room:';
+// 创建单例实例
+exports.postgreSQLRoomDAO = new PostgreSQLRoomDAO();
+//# sourceMappingURL=postgreSQLRoomDAO.js.map

@@ -1,0 +1,1 @@
+import{_ as e,c as a,b as t,h as n}from"./index-DuysnCwA.js";const o={class:"ai-assistant"},_={__name:"AiAssistantView",setup(c){return(i,s)=>(n(),a("div",o,[...s[0]||(s[0]=[t("h1",null,"AI助手",-1),t("p",null,"获取游戏建议和分析",-1)])]))}},l=e(_,[["__scopeId","data-v-c6248357"]]);export{l as default};

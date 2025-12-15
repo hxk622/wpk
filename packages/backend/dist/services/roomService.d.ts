@@ -1,0 +1,11 @@
+import { GameRoom, CreateRoomInput } from '../types/index';
+export declare const createRoom: (userId: string, input: CreateRoomInput) => Promise<GameRoom>;
+export declare const validateRoomPassword: (roomId: string, password: string) => Promise<boolean>;
+export declare const updateRoom: (roomId: string, updates: Partial<GameRoom>, userId: string) => Promise<GameRoom | null>;
+export declare const deleteRoom: (roomId: string, userId: string) => Promise<boolean>;
+export declare const getUserRooms: (userId: string) => Promise<GameRoom[]>;
+export declare const getRoomList: (status?: "waiting" | "playing" | "finished") => Promise<GameRoom[]>;
+export declare const getRoomById: (roomId: string) => Promise<GameRoom | null>;
+export declare const joinRoom: (roomId: string, userId: string) => Promise<boolean>;
+export declare const leaveRoom: (roomId: string, userId: string) => Promise<boolean>;
+export declare const updateRoomStatus: (roomId: string, status: "waiting" | "playing" | "finished") => Promise<boolean>;
