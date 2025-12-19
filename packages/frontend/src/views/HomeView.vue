@@ -3,14 +3,14 @@
     <!-- 顶部导航栏 -->
     <van-nav-bar 
       title="德州扑克" 
-      :right-text="userStore.user?.username || '未登录'"
+      :right-text="userStore.userInfo?.username || '未登录'"
       @click-right="handleUserClick"
     />
 
     <!-- 欢迎区域 -->
     <div class="welcome-section">
       <div class="welcome-content">
-        <div class="welcome-title">欢迎回来，{{ userStore.user?.username || '牌手' }}！</div>
+        <div class="welcome-title">欢迎回来，{{ userStore.userInfo?.username || '牌手' }}！</div>
         <div class="welcome-subtitle">开始你的德州扑克之旅</div>
       </div>
     </div>
@@ -124,7 +124,7 @@ onMounted(() => {
 
 // 处理用户点击
 const handleUserClick = () => {
-  if (userStore.user) {
+  if (userStore.userInfo && userStore.userInfo.id) {
     router.push('/profile');
   } else {
     router.push('/login');

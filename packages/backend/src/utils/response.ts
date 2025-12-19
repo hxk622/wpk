@@ -13,7 +13,7 @@
 export const successResponse = (
   data: any,
   message: string = '操作成功',
-  code: number = 200
+  code: number = 0
 ): { code: number; message: string; data: any } => {
   return {
     code,

@@ -6,8 +6,9 @@ const roomApi = {
   getRooms: async (params) => {
     const response = await api.get('/rooms', { params });
     // 转换数据格式：下划线命名法转为驼峰命名法
-    if (response && response.rooms) {
-      response.rooms = response.rooms.map(room => {
+    const result = { rooms: [] };
+    if (response && Array.isArray(response.rooms)) {
+      result.rooms = response.rooms.map(room => {
         return {
           id: room.id,
           name: room.name,
@@ -21,7 +22,7 @@ const roomApi = {
         };
       });
     }
-    return response;
+    return result;
   },
 
   // 创建房间
@@ -30,8 +31,27 @@ const roomApi = {
   },
 
   // 获取房间详情
-  getRoomDetail: (roomId) => {
-    return api.get(`/rooms/${roomId}`);
+  getRoomDetail: async (roomId) => {
+    const response = await api.get(`/rooms/${roomId}`);
+    // 转换数据格式：下划线命名法转为驼峰命名法
+    if (response && response.room) {
+      const room = response.room;
+      return {
+        room: {
+          id: room.id,
+          smallBlind: room.small_blind,
+          bigBlind: room.big_blind,
+          gameMode: room.table_type,
+          maxPlayers: room.max_players,
+          currentPlayers: room.current_players,
+          status: room.game_status,
+          gameStarted: room.game_status === 'playing',
+          players: room.players || [],
+          ownerId: room.owner_id
+        }
+      };
+    }
+    return response;
   },
 
   // 加入房间
@@ -50,8 +70,23 @@ const roomApi = {
   },
   
   // 获取用户创建的房间
-  getUserCreatedRooms: () => {
-    return api.get('/rooms/user/created');
+  getUserCreatedRooms: async () => {
+    const response = await api.get('/rooms/user/created');
+    // 转换数据格式：下划线命名法转为驼峰命名法
+    const result = { rooms: [] };
+    if (response && Array.isArray(response.rooms)) {
+      result.rooms = response.rooms.map(room => ({
+        id: room.id,
+        name: room.name,
+        status: room.game_status,
+        maxPlayers: room.max_players,
+        currentPlayers: room.current_players,
+        smallBlind: room.small_blind,
+        bigBlind: room.big_blind,
+        players: room.players || []
+      }));
+    }
+    return result;
   },
 
   // 以下API为前端模拟实现，后端尚未提供

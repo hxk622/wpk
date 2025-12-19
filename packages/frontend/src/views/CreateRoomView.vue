@@ -6,15 +6,11 @@
       left-text="返回"
       left-arrow
       @click-left="onClickLeft"
-      background="#1a1a2e"
-      title-style="color: #ffd700"
-      left-text-style="color: #ffd700"
     />
 
     <div class="create-room-container">
       <!-- 房间参数设置表单 -->
-      <van-form @submit="handleCreateRoom">
-        <div class="card-form">
+      <van-form @submit="handleCreateRoom" class="room-form">
           <!-- 房间名 -->
       <div class="form-item">
         <label class="form-label">
@@ -78,12 +74,14 @@
               <van-picker
                 ref="maxPlayersPickerRef"
                 :columns="maxPlayersOptions"
-                @confirm="(value) => { roomForm.maxPlayers = value.value; showMaxPlayersPicker = false; }"
+                :default-index="maxPlayersOptions.findIndex(opt => opt.value === roomForm.maxPlayers)"
+                @confirm="handleMaxPlayersConfirm"
                 show-toolbar
                 toolbar-position="bottom"
                 title="选择最大玩家数量"
                 :height="300"
                 :visible-item-count="5"
+                allow-html
               />
             </van-popup>
           </div>
@@ -100,13 +98,16 @@
             </div>
             <van-popup v-model:show="showGameModePicker" round position="bottom" :style="{ height: '400px' }">
               <van-picker
+                ref="gameModePickerRef"
                 :columns="gameModeOptions"
-                @confirm="(value) => { roomForm.gameMode = value.value; showGameModePicker = false; }"
+                :default-index="gameModeOptions.findIndex(opt => opt.value === roomForm.gameMode)"
+                @confirm="handleGameModeConfirm"
                 show-toolbar
                 toolbar-position="bottom"
                 title="选择游戏模式"
                 :height="300"
                 :visible-item-count="3"
+                allow-html
               />
             </van-popup>
           </div>
@@ -119,7 +120,6 @@
             </label>
             <van-switch v-model="roomForm.allowSpectators" size="28px" active-color="#ffd700" inactive-color="#444" />
           </div>
-        </div>
 
         <!-- 创建房间按钮 -->
         <div class="create-button-container">
@@ -141,7 +141,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue';
+import { ref, reactive, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../stores/user';
 import roomApi from '../api/room';
@@ -197,66 +197,21 @@ const showGameModePicker = ref(false);
 const maxPlayersPickerRef = ref(null);
 const gameModePickerRef = ref(null);
 
-// 鼠标滚轮事件处理
-const handleWheel = (e, pickerRef, options, currentValue, setValue) => {
-  e.preventDefault();
-  
-  // 查找当前选中项的索引
-  const currentIndex = options.findIndex(opt => opt.value === currentValue);
-  
-  // 根据滚轮方向计算新索引
-  let newIndex;
-  if (e.deltaY < 0) {
-    // 向上滚动，选择上一项
-    newIndex = Math.max(0, currentIndex - 1);
-  } else {
-    // 向下滚动，选择下一项
-    newIndex = Math.min(options.length - 1, currentIndex + 1);
+// 最大玩家数量选择器确认事件
+const handleMaxPlayersConfirm = ({ selectedOptions }) => {
+  if (selectedOptions && selectedOptions.length > 0) {
+    roomForm.maxPlayers = selectedOptions[0].value;
   }
-  
-  // 更新值
-  setValue(options[newIndex].value);
+  showMaxPlayersPicker.value = false;
 };
 
-// 添加鼠标滚轮事件监听器
-const addWheelEventListener = () => {
-  if (maxPlayersPickerRef.value) {
-    const pickerEl = maxPlayersPickerRef.value.$el;
-    pickerEl.addEventListener('wheel', (e) => {
-      handleWheel(e, maxPlayersPickerRef, maxPlayersOptions, roomForm.maxPlayers, (value) => {
-        roomForm.maxPlayers = value;
-      });
-    });
+// 游戏模式选择器确认事件
+const handleGameModeConfirm = ({ selectedOptions }) => {
+  if (selectedOptions && selectedOptions.length > 0) {
+    roomForm.gameMode = selectedOptions[0].value;
   }
-  
-  if (gameModePickerRef.value) {
-    const pickerEl = gameModePickerRef.value.$el;
-    pickerEl.addEventListener('wheel', (e) => {
-      handleWheel(e, gameModePickerRef, gameModeOptions, roomForm.gameMode, (value) => {
-        roomForm.gameMode = value;
-      });
-    });
-  }
+  showGameModePicker.value = false;
 };
-
-// 监听弹出层显示事件，添加鼠标滚轮支持
-watch(() => showMaxPlayersPicker.value, (newValue) => {
-  if (newValue) {
-    // 延迟添加事件监听器，确保DOM已渲染
-    setTimeout(() => {
-      addWheelEventListener();
-    }, 100);
-  }
-});
-
-watch(() => showGameModePicker.value, (newValue) => {
-  if (newValue) {
-    // 延迟添加事件监听器，确保DOM已渲染
-    setTimeout(() => {
-      addWheelEventListener();
-    }, 100);
-  }
-});
 
 // 获取当前选中的文本 - 彻底避免使用索引访问
 const getMaxPlayersText = () => {
@@ -358,7 +313,7 @@ const handleCreateRoom = async () => {
 <style scoped>
 .create-room {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background-color: #f5f5f5;
   font-family: 'Arial', sans-serif;
 }
 
@@ -366,20 +321,24 @@ const handleCreateRoom = async () => {
   padding: 20px;
   max-width: 500px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
 }
 
 .card-form {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  background: white;
+  border-radius: 12px;
   padding: 24px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  width: 100%;
 }
 
 .card-form:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
 }
 
@@ -398,38 +357,38 @@ const handleCreateRoom = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #ffd700;
+  color: #333;
   font-size: 16px;
   font-weight: 600;
 }
 
 .form-label span {
-  color: #fff;
+  color: #333;
 }
 
 .form-field {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: white;
+  border: 1px solid #e8e8e8;
   border-radius: 8px;
-  color: #fff;
+  color: #333;
   padding: 12px 16px;
   font-size: 16px;
   transition: all 0.3s ease;
 }
 
 .form-field:focus {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: #ffd700;
-  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2);
+  background: white;
+  border-color: #1989fa;
+  box-shadow: 0 0 0 2px rgba(25, 137, 250, 0.2);
 }
 
 .form-field::placeholder {
-  color: #888;
+  color: #999;
 }
 
 .picker-wrapper {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: white;
+  border: 1px solid #e8e8e8;
   border-radius: 8px;
   padding: 12px 16px;
   display: flex;
@@ -437,7 +396,7 @@ const handleCreateRoom = async () => {
   align-items: flex-start;
   cursor: pointer;
   transition: all 0.3s ease;
-  color: #fff;
+  color: #333;
   font-size: 16px;
   gap: 4px;
 }
@@ -445,12 +404,12 @@ const handleCreateRoom = async () => {
 .picker-value {
   font-size: 18px;
   font-weight: 600;
-  color: #ffd700;
+  color: #1989fa;
 }
 
 .picker-hint {
   font-size: 12px;
-  color: #888;
+  color: #999;
   margin-top: 2px;
   width: 100%;
   display: flex;
@@ -459,8 +418,8 @@ const handleCreateRoom = async () => {
 }
 
 .picker-wrapper:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: #ffd700;
+  background: #f9f9f9;
+  border-color: #1989fa;
 }
 
 .switch-item {
@@ -480,7 +439,7 @@ const handleCreateRoom = async () => {
 }
 
 .create-button-hint {
-  color: #ffd700;
+  color: #666;
   font-size: 14px;
   font-weight: 500;
   opacity: 0.9;
@@ -491,13 +450,12 @@ const handleCreateRoom = async () => {
   height: 56px;
   font-size: 20px;
   font-weight: 700;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-  color: #1a1a2e;
+  border-radius: 8px;
+  background-color: #1989fa;
+  color: white;
   border: none;
-  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
+  box-shadow: 0 4px 12px rgba(25, 137, 250, 0.3);
   transition: all 0.3s ease;
-  animation: pulse 2s infinite;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -506,37 +464,27 @@ const handleCreateRoom = async () => {
 
 .create-room-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
+  box-shadow: 0 6px 16px rgba(25, 137, 250, 0.4);
 }
 
 .create-room-btn:active {
   transform: translateY(0);
 }
 
-@keyframes pulse {
-  0% {
-    box-shadow: 0 4px 16px rgba(255, 215, 0, 0.4);
-  }
-  50% {
-    box-shadow: 0 6px 24px rgba(255, 215, 0, 0.6);
-  }
-  100% {
-    box-shadow: 0 4px 16px rgba(255, 215, 0, 0.4);
-  }
-}
-
 /* 响应式设计 */
 @media (max-width: 480px) {
   .create-room-container {
-    padding: 16px 16px 60px;
+    padding: 16px 16px 100px; /* 增加底部内边距，防止按钮被挡住 */
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box; /* 确保内边距不增加总高度 */
   }
   
   .card-form {
     padding: 20px;
     flex: 1;
+    box-sizing: border-box;
   }
   
   .create-button-container {
@@ -546,8 +494,31 @@ const handleCreateRoom = async () => {
   
   .create-room-btn {
     margin-top: 0;
-    height: 50px;
+    height: 56px; /* 增加按钮高度，提高可点击区域 */
     font-size: 18px;
   }
+}
+
+
+
+/* 确保表单内容不被底部按钮挡住 */
+.room-form {
+  margin-bottom: 20px;
+}
+
+/* 选择器容器样式优化 */
+.picker-wrapper {
+  touch-action: pan-y;
+}
+
+/* 修复选择器滑动问题 */
+.van-picker__column {
+  touch-action: pan-y;
+}
+
+/* 确保内容区域可以滚动 */
+.create-room-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 </style>

@@ -71,3 +71,9 @@ packages/frontend/.env
 # Shared specific
 packages/shared/dist/
 packages/shared/node_modules/
+node_modules
+node_modules
+node_modules
+node_modules
+node_modules
+node_modules

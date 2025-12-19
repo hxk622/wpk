@@ -9,9 +9,9 @@ export class PostgreSQLUserDAO implements UserDAO {
 
   async create(entity: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User> {
     const result = await pool.query(
-      `INSERT INTO ${PostgreSQLUserDAO.TABLE_NAME} (username, password_hash, email, phone, avatar, balance, role, chips)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [entity.username, entity.password_hash, entity.email, entity.phone, entity.avatar, entity.balance || 0, entity.role || 'player', entity.chips]
+      `INSERT INTO ${PostgreSQLUserDAO.TABLE_NAME} (username, password_hash, email, phone, avatar, chips)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [entity.username, entity.password_hash, entity.email, entity.phone, entity.avatar, entity.chips]
     );
 
     const userRow = result.rows[0];
@@ -19,8 +19,6 @@ export class PostgreSQLUserDAO implements UserDAO {
     const user: User = {
       ...userRow,
       password_hash: userRow.password_hash,
-      balance: userRow.balance || 0,
-      role: userRow.role || 'player',
       createdAt: userRow.created_at,
       updatedAt: userRow.updated_at
     };
@@ -57,8 +55,6 @@ export class PostgreSQLUserDAO implements UserDAO {
     const user: User = {
       ...userRow,
       password_hash: userRow.password_hash,
-      balance: userRow.balance || 0,
-      role: userRow.role || 'player',
       createdAt: userRow.created_at,
       updatedAt: userRow.updated_at
     };
@@ -97,8 +93,6 @@ export class PostgreSQLUserDAO implements UserDAO {
     const user: User = {
       ...userRow,
       password_hash: userRow.password_hash,
-      balance: userRow.balance || 0,
-      role: userRow.role || 'player',
       createdAt: userRow.created_at,
       updatedAt: userRow.updated_at
     };
@@ -147,8 +141,6 @@ export class PostgreSQLUserDAO implements UserDAO {
     return result.rows.map(row => ({
       ...row,
       password_hash: row.password_hash,
-      balance: row.balance || 0,
-      role: row.role || 'player',
       createdAt: row.created_at,
       updatedAt: row.updated_at
     } as User));
@@ -175,8 +167,6 @@ export class PostgreSQLUserDAO implements UserDAO {
     const user: User = {
       ...userRow,
       password_hash: userRow.password_hash,
-      balance: userRow.balance || 0,
-      role: userRow.role || 'player',
       createdAt: userRow.created_at,
       updatedAt: userRow.updated_at
     };
@@ -207,8 +197,6 @@ export class PostgreSQLUserDAO implements UserDAO {
     const user: User = {
       ...userRow,
       password_hash: userRow.password_hash,
-      balance: userRow.balance || 0,
-      role: userRow.role || 'player',
       createdAt: userRow.created_at,
       updatedAt: userRow.updated_at
     };
@@ -239,8 +227,6 @@ export class PostgreSQLUserDAO implements UserDAO {
     const user: User = {
       ...userRow,
       password_hash: userRow.password_hash,
-      balance: userRow.balance || 0,
-      role: userRow.role || 'player',
       createdAt: userRow.created_at,
       updatedAt: userRow.updated_at
     };
@@ -254,9 +240,9 @@ export class PostgreSQLUserDAO implements UserDAO {
     const { username, password, email, phone } = input;
     
     const result = await pool.query(
-      `INSERT INTO ${PostgreSQLUserDAO.TABLE_NAME} (username, password_hash, email, phone, balance, role, chips)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [username, password, email, phone, 0, 'player', 10000] // 默认初始余额为0，角色为player，筹码为10000
+      `INSERT INTO ${PostgreSQLUserDAO.TABLE_NAME} (username, password_hash, email, phone, chips)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [username, password, email, phone, 10000] // 默认筹码为10000
     );
 
     const userRow = result.rows[0];
@@ -293,8 +279,6 @@ export class PostgreSQLUserDAO implements UserDAO {
     const user: User = {
       ...userRow,
       password_hash: userRow.password_hash,
-      balance: userRow.balance || 0,
-      role: userRow.role || 'player',
       createdAt: userRow.created_at,
       updatedAt: userRow.updated_at
     };

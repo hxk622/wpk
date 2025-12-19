@@ -10,26 +10,24 @@ export class PostgreSQLRoomDAO implements RoomDAO {
 
   // 这个方法与接口定义不匹配，应该由createRoom方法代替
   async create(entity: Omit<GameRoom, 'id' | 'created_at' | 'updated_at'>): Promise<GameRoom> {
-    try {
-      const result = await pool.query(
-        `INSERT INTO ${PostgreSQLRoomDAO.TABLE_NAME} (name, room_type, small_blind, big_blind, max_players, current_players, game_status, owner_id, password, min_buy_in, max_buy_in, table_type) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-        [entity.name, entity.room_type, entity.small_blind, entity.big_blind, entity.max_players, entity.current_players || 0, entity.game_status || 'waiting', entity.owner_id, entity.password, entity.min_buy_in, entity.max_buy_in, entity.table_type || 'cash']
-      );
-
-      const room = result.rows[0];
-      loggerService.info('创建房间成功', { roomId: room.id, ownerId: entity.owner_id });
-      
-      // 缓存房间详情
-      await RedisCache.set(`${PostgreSQLRoomDAO.CACHE_KEY_PREFIX}${room.id}`, room, 3600);
-      // 更新房间列表缓存
-      await this.invalidateRoomListCache();
-      return room;
-    } catch (error) {
-      loggerService.error('创建房间失败', { error, entity });
-      throw error;
-    }
+    // 内部使用createRoom方法实现，保持接口兼容性
+    return this.createRoom(
+      {
+        name: entity.name,
+        room_type: entity.room_type,
+        small_blind: entity.small_blind,
+        big_blind: entity.big_blind,
+        max_players: entity.max_players,
+        password: entity.password,
+        min_buy_in: entity.min_buy_in,
+        max_buy_in: entity.max_buy_in,
+        table_type: entity.table_type
+      },
+      entity.owner_id
+    );
   }
+
+
 
   async getById(id: string): Promise<GameRoom | null> {
     try {
@@ -40,17 +38,43 @@ export class PostgreSQLRoomDAO implements RoomDAO {
         return cachedRoom;
       }
 
-      const result = await pool.query(
+      const roomResult = await pool.query(
         `SELECT * FROM ${PostgreSQLRoomDAO.TABLE_NAME} WHERE id = $1`,
         [id]
       );
 
-      if (result.rows.length === 0) {
+      if (roomResult.rows.length === 0) {
         loggerService.info('房间不存在', { roomId: id });
         return null;
       }
 
-      const room = result.rows[0];
+      const room = roomResult.rows[0];
+      
+      // 获取房间内的玩家列表
+      const playersResult = await pool.query(
+        `SELECT u.id, u.username, u.avatar, sp.seat_number, sp.chips, sp.is_active, sp.is_ready
+         FROM session_players sp
+         JOIN users u ON sp.user_id = u.id
+         JOIN game_sessions gs ON sp.session_id = gs.id
+         WHERE gs.room_id = $1 AND gs.status IN ('waiting', 'playing')
+         ORDER BY sp.seat_number ASC`,
+        [id]
+      );
+      
+      // 添加玩家列表到房间信息中
+      room.players = playersResult.rows.map(player => ({
+        id: player.id,
+        username: player.username,
+        avatar: player.avatar,
+        seatNumber: player.seat_number,
+        stack: player.chips,
+        isActive: player.is_active,
+        ready: player.is_ready
+      }));
+      
+      // 更新current_players字段
+      room.current_players = room.players.length;
+      
       // 缓存房间详情
       await RedisCache.set(`${PostgreSQLRoomDAO.CACHE_KEY_PREFIX}${room.id}`, room, 3600);
       loggerService.debug('从数据库获取房间信息成功', { roomId: id });
@@ -204,14 +228,29 @@ export class PostgreSQLRoomDAO implements RoomDAO {
     }
   }
 
+  // 实现RoomDAO接口定义的createRoom方法
   async createRoom(input: CreateRoomInput, ownerId: string): Promise<GameRoom> {
     try {
-      const { name, room_type, small_blind, big_blind, max_players, password, min_buy_in, max_buy_in, table_type } = input;
-      
+      const { 
+        name, 
+        room_type, 
+        small_blind, 
+        big_blind, 
+        max_players,
+        password,
+        min_buy_in,
+        max_buy_in,
+        table_type = 'cash'
+      } = input;
+
+      // 设置默认值
+      const currentPlayers = 0;
+      const gameStatus = 'waiting';
+
       const result = await pool.query(
-        `INSERT INTO ${PostgreSQLRoomDAO.TABLE_NAME} (name, room_type, small_blind, big_blind, max_players, owner_id, password, min_buy_in, max_buy_in, table_type) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-        [name, room_type, small_blind, big_blind, max_players, ownerId, password, min_buy_in, max_buy_in, table_type || 'cash']
+        `INSERT INTO ${PostgreSQLRoomDAO.TABLE_NAME} (name, room_type, small_blind, big_blind, max_players, current_players, game_status, owner_id, password, min_buy_in, max_buy_in, table_type) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        [name, room_type, small_blind, big_blind, max_players, currentPlayers, gameStatus, ownerId, password, min_buy_in, max_buy_in, table_type]
       );
 
       const room = result.rows[0];

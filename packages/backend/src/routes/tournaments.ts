@@ -64,7 +64,7 @@ router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const tournamentData = req.body;
     const tournament = await tournamentService.createTournament(tournamentData);
-    res.status(201).json(successResponse({ tournament }, '锦标赛创建成功', 201));
+    res.status(201).json(successResponse({ tournament }, '锦标赛创建成功'));
   } catch (error: any) {
     res.status(500).json(errorResponse(error.message, 500));
   }
@@ -194,7 +194,7 @@ router.post('/:id/register', authMiddleware, async (req, res) => {
     }
     
     const registration = await tournamentService.registerForTournament(id, userId);
-    res.status(201).json(successResponse({ registration }, '注册参加锦标赛成功', 201));
+    res.status(201).json(successResponse({ registration }, '注册参加锦标赛成功'));
   } catch (error: any) {
     res.status(500).json(errorResponse(error.message, 500));
   }
@@ -363,7 +363,7 @@ router.get('/tournaments/:id/rankings', async (req, res) => {
 router.post('/tournaments/default-blind-structure', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const blindStructure = await tournamentService.createDefaultBlindStructure();
-    res.status(201).json(successResponse({ blindStructure }, '默认盲注结构创建成功', 201));
+    res.status(201).json(successResponse({ blindStructure }, '默认盲注结构创建成功'));
   } catch (error: any) {
     res.status(500).json(errorResponse(error.message, 500));
   }

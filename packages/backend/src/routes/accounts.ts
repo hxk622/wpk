@@ -16,7 +16,7 @@ router.post('/payment-methods', authMiddleware, async (req: Request, res: Respon
 
     const input: CreatePaymentMethodInput = req.body;
     const paymentMethod = await accountService.createPaymentMethod(userId, input);
-    return res.status(201).json(successResponse({ paymentMethod }, '支付方式创建成功', 201));
+    return res.status(201).json(successResponse({ paymentMethod }, '支付方式创建成功'));
   } catch (error) {
     next(error);
   }
@@ -104,7 +104,7 @@ router.post('/deposit', authMiddleware, async (req: Request, res: Response, next
 
     const input: DepositInput = req.body;
     const transaction = await accountService.deposit(userId, input);
-    return res.status(201).json(successResponse({ transaction }, '存款成功', 201));
+    return res.status(201).json(successResponse({ transaction }, '存款成功'));
   } catch (error) {
     next(error);
   }
@@ -119,7 +119,7 @@ router.post('/withdraw', authMiddleware, async (req: Request, res: Response, nex
 
     const input: WithdrawInput = req.body;
     const transaction = await accountService.withdraw(userId, input);
-    return res.status(201).json(successResponse({ transaction }, '取款成功', 201));
+    return res.status(201).json(successResponse({ transaction }, '取款成功'));
   } catch (error) {
     next(error);
   }

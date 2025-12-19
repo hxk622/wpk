@@ -117,7 +117,7 @@ router.post('/', authenticateToken, async (req, res) => {
     loggerService.info('收到创建房间请求', { userId, roomName: input.name });
     const room = await createRoom(userId, input);
     loggerService.info('创建房间成功', { userId, roomId: room.id, roomName: room.name });
-    res.status(201).json(successResponse({ room }, '房间创建成功', 201));
+    res.status(201).json(successResponse({ room }, '房间创建成功'));
   } catch (error) {
     loggerService.error('创建房间失败', { error, userId, roomName: input.name });
     res.status(400).json(errorResponse('创建房间失败', 400, { details: (error as Error).message }));

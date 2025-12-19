@@ -140,7 +140,7 @@ router.post('/cheat/detect', async (req: Request, res: Response, next: NextFunct
       gameSessionId
     );
 
-    res.status(201).json(successResponse({ detection }, '反作弊检测记录成功', 201));
+    res.status(201).json(successResponse({ detection }, '反作弊检测记录成功'));
   } catch (error) {
     LoggerService.error('记录反作弊检测失败', {
       error: error instanceof Error ? error.message : '未知错误'
@@ -258,7 +258,7 @@ router.post('/admin/warnings',
         expiresAt: expiresAt ? new Date(expiresAt) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       });
 
-      res.status(201).json(successResponse({ warning }, '用户警告创建成功', 201));
+      res.status(201).json(successResponse({ warning }, '用户警告创建成功'));
     } catch (error) {
       LoggerService.error('创建用户警告失败', {
         userId: req.body.userId,

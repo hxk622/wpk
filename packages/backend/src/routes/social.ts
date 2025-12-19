@@ -50,7 +50,7 @@ router.post('/friend-requests', authMiddleware, async (req, res) => {
     }
     
     const friendRequest = await socialService.sendFriendRequest(fromUserId, toUserId);
-    res.status(201).json(successResponse({ friendRequest }, '好友请求发送成功', 201));
+    res.status(201).json(successResponse({ friendRequest }, '好友请求发送成功'));
   } catch (error: any) {
     res.status(500).json(errorResponse(error.message, 500));
   }
@@ -366,7 +366,7 @@ router.post('/social/messages', authMiddleware, async (req, res) => {
     }
     
     const message = await socialService.sendPrivateMessage(senderId, receiverId, content);
-    res.status(201).json(successResponse({ message }, '发送私信成功', 201));
+    res.status(201).json(successResponse({ message }, '发送私信成功'));
   } catch (error: any) {
     res.status(500).json(errorResponse(error.message, 500));
   }

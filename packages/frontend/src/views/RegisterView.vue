@@ -74,12 +74,15 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
+import { useUserStore } from '../stores/user';
 import userApi from '../api/user';
 import { showToast } from 'vant';
 import { logger } from '../utils/logger';
 
 // 路由实例
 const router = useRouter();
+// 用户状态管理
+const userStore = useUserStore();
 
 // 注册表单数据
 const registerForm = reactive({
@@ -151,10 +154,21 @@ const handleRegister = async () => {
     // 注册成功
     showToast('注册成功');
     logger.info('注册成功', { username: registerForm.username, email: registerForm.email });
-    // 跳转到登录页面
-    setTimeout(() => {
-      router.push('/login');
-    }, 1500);
+    
+    // 检查响应格式，如果包含user和token，则自动登录
+    if (response && response.user && response.token) {
+      // 保存用户信息和token
+      userStore.login(response.user, response.token);
+      // 跳转到大厅页面
+      setTimeout(() => {
+        router.push('/');
+      }, 1500);
+    } else {
+      // 如果响应格式不符合预期，跳转到登录页面
+      setTimeout(() => {
+        router.push('/login');
+      }, 1500);
+    }
   } catch (error) {
     logger.error('注册失败', { error, username: registerForm.username, email: registerForm.email });
     // 处理API错误信息

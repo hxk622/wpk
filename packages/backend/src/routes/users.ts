@@ -43,7 +43,7 @@ const router = express.Router();
 router.post('/register', async (req, res) => {
   const input: RegisterUserInput = req.body;
   const user = await registerUser(input);
-  res.status(201).json(successResponse({ user }, '用户注册成功', 201));
+  res.status(201).json(successResponse({ user }, '用户注册成功'));
 });
 
 /**
