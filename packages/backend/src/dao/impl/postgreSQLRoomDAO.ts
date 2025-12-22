@@ -280,14 +280,18 @@ export class PostgreSQLRoomDAO implements RoomDAO {
         return null;
       }
 
-      const room = result.rows[0];
-      loggerService.info('更新房间玩家数量成功', { roomId, previousCount: room.current_players - delta, newCount: room.current_players, delta });
+      loggerService.info('更新房间玩家数量成功', { roomId, delta });
       
-      // 更新缓存
-      await RedisCache.set(`${PostgreSQLRoomDAO.CACHE_KEY_PREFIX}${room.id}`, room, 3600);
+      // 获取完整的房间信息，包括玩家列表
+      const completeRoom = await this.getById(roomId);
+      
+      // 更新缓存（包含完整的房间信息和玩家列表）
+      if (completeRoom) {
+        await RedisCache.set(`${PostgreSQLRoomDAO.CACHE_KEY_PREFIX}${roomId}`, completeRoom, 3600);
+      }
       // 更新房间列表缓存
       await this.invalidateRoomListCache();
-      return room;
+      return completeRoom;
     } catch (error) {
       loggerService.error('更新房间玩家数量失败', { error, roomId, delta });
       throw error;

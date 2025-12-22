@@ -1,59 +1,63 @@
 <template>
   <div class="game-table-container">
-    <!-- 游戏桌 -->
-    <div class="game-table">
-      <!-- 公共牌区域 -->
-      <div class="community-cards">
-        <div v-for="(card, index) in communityCards" :key="index" class="card-wrapper">
-          <Card :card="card" :is-flipped="true" />
-        </div>
-        <div v-if="communityCards.length < 5" v-for="index in (5 - communityCards.length)" :key="'empty-' + index" class="card-wrapper empty"></div>
-      </div>
-      
-      <!-- 底池信息 -->
-      <div class="pot-info">
-        <div class="pot-label">底池</div>
-        <div class="pot-amount">{{ formatMoney(totalPot) }}</div>
-      </div>
-      
-      <!-- 当前回合信息 -->
-      <div class="round-info" v-if="currentPlayer">
-        <div class="phase-label">{{ phaseLabel }}</div>
-        <div class="current-player">当前行动: {{ currentPlayer.username }}</div>
-        <div class="current-bet" v-if="currentBet > 0">当前下注: {{ formatMoney(currentBet) }}</div>
-      </div>
-    </div>
-    
-    <!-- 玩家座位 -->
-    <div class="player-seats">
-      <div v-for="player in players" :key="player.id" 
-           class="player-seat" 
-           :class="{
-             'current-player': player.isCurrentPlayer,
-             'dealer': player.isDealer,
-             'small-blind': player.isSmallBlind,
-             'big-blind': player.isBigBlind,
-             'folded': player.hasFolded,
-             'winner': player.isWinner
-           }"
-           :style="getSeatPosition(player.position)">
-        <!-- 玩家信息 -->
-        <div class="player-info">
-          <div class="player-avatar" :style="{ backgroundColor: getRandomColor(player.id) }">
-            {{ player.username.charAt(0).toUpperCase() }}
+    <!-- 游戏桌背景 -->
+    <div class="game-table-background">
+      <!-- 玩家座位 - 动态生成 -->
+      <div class="player-seats" :style="{ '--seat-count': maxPlayers }">
+        <div 
+          v-for="index in maxPlayers" 
+          :key="index" 
+          class="seat" 
+          :style="getSeatPosition(index - 1)"
+        >
+          <div v-if="getPlayerByPosition(index - 1)" class="player-info">
+            <div class="player-avatar">
+              <img :src="getPlayerByPosition(index - 1).avatar || 'https://img.yzcdn.cn/vant/cat.jpeg'" alt="avatar" />
+            </div>
+            <div class="player-name">{{ getPlayerByPosition(index - 1).username }}</div>
+            <div class="player-stack">{{ getPlayerByPosition(index - 1).stack }}</div>
           </div>
-          <div class="player-name">{{ player.username }}</div>
-          <div class="player-stack">{{ formatMoney(player.stack) }}</div>
-          <div v-if="player.bet > 0" class="player-bet">{{ formatMoney(player.bet) }}</div>
-          
-          <!-- 玩家状态指示器 -->
-          <div v-if="player.isDealer" class="status-indicator dealer">D</div>
-          <div v-else-if="player.isSmallBlind" class="status-indicator small-blind">SB</div>
-          <div v-else-if="player.isBigBlind" class="status-indicator big-blind">BB</div>
-          
-          <!-- 行动状态 -->
-          <div v-if="player.hasFolded" class="action-indicator folded">弃牌</div>
-          <div v-else-if="player.isAllIn" class="action-indicator all-in">全下</div>
+          <div v-else class="empty-seat">+</div>
+        </div>
+      </div>
+      
+      <!-- 中央区域 -->
+      <div class="center-area">
+        <!-- 品牌标识 -->
+        <div class="brand-logo">
+          <div class="logo-text">WePoker</div>
+          <div class="logo-url">www.wpk.com</div>
+        </div>
+        
+        <!-- 总底池信息 -->
+        <div class="pot-info">
+          <div class="pot-banner">总底池</div>
+          <div class="pot-amount">{{ formatMoney(totalPot) }}</div>
+        </div>
+        
+        <!-- 邀请好友按钮 -->
+        <div class="invite-button">邀请好友</div>
+        
+        <!-- 房间信息 -->
+        <div class="room-info">
+          <div class="room-stats">
+            <span>20/40</span>
+            <span>♠ 950344</span>
+            <span>⏱ 01:00:00</span>
+          </div>
+          <div class="room-details">
+            <div class="detail-item">
+              <span class="label">带入记分牌上限：</span>
+              <span class="value">40000</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">随机入座 | </span>
+              <span class="value">All-in发两次</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">web.wpk13.com</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -66,7 +70,7 @@ import Card from './Card.vue';
 
 // 本地实现formatMoney函数，避免从shared包导入
 const formatMoney = (amount) => {
-  return `$${amount.toFixed(2)}`;
+  return `${amount}`;
 };
 
 const props = defineProps({
@@ -93,269 +97,261 @@ const props = defineProps({
   totalPot: {
     type: Number,
     default: 0
+  },
+  maxPlayers: {
+    type: Number,
+    default: 6,
+    validator: (value) => value >= 2 && value <= 12
   }
 });
 
-// 计算阶段标签
-const phaseLabel = computed(() => {
-  switch (props.gamePhase) {
-    case 'preflop': return '翻牌前';
-    case 'flop': return '翻牌';
-    case 'turn': return '转牌';
-    case 'river': return '河牌';
-    case 'showdown': return '摊牌';
-    default: return '等待开始';
-  }
-});
-
-// 计算玩家座位位置
-const getSeatPosition = (position) => {
-  const positions = [
-    { top: '10%', left: '45%' },      // 位置1
-    { top: '20%', left: '70%' },      // 位置2
-    { top: '50%', left: '85%' },      // 位置3
-    { top: '80%', left: '70%' },      // 位置4
-    { top: '90%', left: '45%' },      // 位置5
-    { top: '80%', left: '20%' },      // 位置6
-    { top: '50%', left: '5%' },       // 位置7
-    { top: '20%', left: '20%' }       // 位置8
-  ];
-  return positions[position % positions.length] || { top: '50%', left: '50%' };
+// 根据位置获取玩家
+const getPlayerByPosition = (position) => {
+  return props.players.find(player => player.position === position);
 };
 
-// 生成随机颜色
-const getRandomColor = (id) => {
-  const colors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
-    '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
-    '#BB8FCE', '#85C1E2', '#F8C471', '#82E0AA'
-  ];
-  return colors[Math.abs(id.hashCode()) % colors.length];
-};
-
-// 字符串哈希函数
-String.prototype.hashCode = function() {
-  let hash = 0;
-  for (let i = 0; i < this.length; i++) {
-    const char = this.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash;
+// 动态计算座位位置
+const getSeatPosition = (index) => {
+  const seatCount = props.maxPlayers;
+  const angle = (index / seatCount) * Math.PI * 2 - Math.PI / 2; // 从顶部开始
+  const radius = 45; // 百分比半径
+  const x = Math.cos(angle) * radius + 50;
+  const y = Math.sin(angle) * radius + 50;
+  return {
+    top: `${y}%`,
+    left: `${x}%`,
+    transform: 'translate(-50%, -50%)'
+  };
 };
 </script>
 
 <style scoped>
+/* 游戏桌容器 */
 .game-table-container {
   position: relative;
   width: 100%;
-  height: 600px;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #1e3a20;
-  padding: 20px;
-  box-sizing: border-box;
 }
 
-.game-table {
+/* 游戏桌背景 */
+.game-table-background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1e553c 0%, #143a25 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 玩家座位容器 */
+.player-seats {
   position: relative;
-  width: 80%;
-  height: 80%;
-  max-width: 800px;
-  max-height: 500px;
-  background: radial-gradient(circle at center, #2d5a27 0%, #1e3a20 70%);
-  border-radius: 50%;
-  border: 10px solid #8B4513;
-  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  height: 100%;
+  max-width: 900px;
+  max-height: 900px;
+}
+
+/* 座位样式 */
+.seat {
+  position: absolute;
+  width: 120px;
+  height: 120px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  cursor: pointer;
 }
 
-.community-cards {
+/* 座位位置通过JavaScript动态计算 */
+.seat {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* 空位样式 */
+.empty-seat {
+  width: 60px;
+  height: 60px;
+  border: 3px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 30px;
+  font-size: 30px;
+  color: rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
 }
 
-.card-wrapper {
-  margin: 0 5px;
+.empty-seat:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.6);
 }
 
-.card-wrapper.empty {
-  width: 80px;
-  height: 112px;
-  border: 2px dashed rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  margin: 0 5px;
+/* 玩家信息样式 */
+.player-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 
-.pot-info {
-  text-align: center;
-  margin-bottom: 20px;
-  color: white;
+/* 玩家头像 */
+.player-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
-.pot-label {
+.player-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 玩家名称 */
+.player-name {
   font-size: 14px;
-  opacity: 0.8;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 4px;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+/* 玩家筹码 */
+.player-stack {
+  font-size: 14px;
+  color: white;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+/* 中央区域 */
+.center-area {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+/* 品牌标识 */
+.brand-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.logo-text {
+  font-size: 36px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.3);
+  margin-bottom: 5px;
+}
+
+.logo-url {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* 总底池信息 */
+.pot-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.pot-banner {
+  background: linear-gradient(90deg, #1e7e34, #2ecc71);
+  color: white;
+  padding: 5px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .pot-amount {
   font-size: 32px;
   font-weight: bold;
-  color: #FFD700;
-}
-
-.round-info {
-  text-align: center;
   color: white;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+/* 邀请好友按钮 */
+.invite-button {
+  background: linear-gradient(90deg, #1e7e34, #2ecc71);
+  color: white;
+  padding: 12px 40px;
+  border-radius: 30px;
   font-size: 16px;
-}
-
-.phase-label {
   font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.current-player {
-  margin-bottom: 5px;
-}
-
-.current-bet {
-  color: #FFD700;
-  font-weight: bold;
-}
-
-.player-seats {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-}
-
-.player-seat {
-  position: absolute;
-  background: rgba(0, 0, 0, 0.6);
-  border: 2px solid transparent;
-  border-radius: 8px;
-  padding: 10px;
-  min-width: 120px;
-  text-align: center;
-  pointer-events: auto;
+  cursor: pointer;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
 }
 
-.player-seat.current-player {
-  border-color: #FFD700;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
-  transform: scale(1.1);
+.invite-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
-.player-seat.dealer {
-  border-color: #FF6B6B;
-}
-
-.player-seat.small-blind {
-  border-color: #4ECDC4;
-}
-
-.player-seat.big-blind {
-  border-color: #45B7D1;
-}
-
-.player-seat.folded {
-  opacity: 0.5;
-}
-
-.player-seat.winner {
-  border-color: #FFD700;
-  box-shadow: 0 0 20px rgba(255, 215, 0, 1);
-}
-
-.player-info {
-  color: white;
-}
-
-.player-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+/* 房间信息 */
+.room-info {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  color: white;
-  font-weight: bold;
-  margin: 0 auto 8px;
-}
-
-.player-name {
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
-  margin-bottom: 4px;
-  font-weight: bold;
 }
 
-.player-stack {
-  font-size: 12px;
-  margin-bottom: 2px;
-}
-
-.player-bet {
-  font-size: 14px;
-  color: #FFD700;
-  font-weight: bold;
-  margin-top: 2px;
-}
-
-.status-indicator {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: bold;
+.room-stats {
   display: flex;
-  justify-content: center;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+
+.room-details {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  color: white;
+  gap: 5px;
 }
 
-.status-indicator.dealer {
-  background-color: #FF6B6B;
+.detail-item {
+  display: flex;
+  gap: 5px;
+  text-align: center;
 }
 
-.status-indicator.small-blind {
-  background-color: #4ECDC4;
-}
-
-.status-indicator.big-blind {
-  background-color: #45B7D1;
-}
-
-.action-indicator {
-  position: absolute;
-  bottom: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
+.detail-item .label {
   font-weight: bold;
-  color: white;
 }
 
-.action-indicator.folded {
-  background-color: #777;
-}
-
-.action-indicator.all-in {
-  background-color: #FF6B6B;
+.detail-item .value {
+  color: rgba(255, 255, 255, 0.9);
 }
 </style>

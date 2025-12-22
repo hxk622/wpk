@@ -158,9 +158,12 @@ export const joinRoom = async (roomId: string, userId: string): Promise<boolean>
   try {
     // 检查用户是否已经在其他房间中
     const currentRoomId = await postgreSQLRoomDAO.getUserCurrentRoom(userId);
+    loggerService.debug('getUserCurrentRoom返回结果', { userId, currentRoomId });
     if (currentRoomId) {
       loggerService.warn('加入房间失败：用户已经在其他房间中', { userId, currentRoomId, requestedRoomId: roomId });
-      throw new Error('您已经在另一个房间中，请先离开当前房间');
+      // 强制离开当前房间
+      loggerService.info('强制离开当前房间', { userId, currentRoomId });
+      await postgreSQLRoomDAO.leaveRoom(currentRoomId, userId);
     }
     
     const success = await postgreSQLRoomDAO.joinRoom(roomId, userId);

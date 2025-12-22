@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { TooManyRequestsError } from '../utils/errors';
+import loggerService from '../services/loggerService';
 
 // 速率限制配置
 interface RateLimitConfig {
@@ -31,23 +32,24 @@ export const createRateLimitMiddleware = (config: RateLimitConfig) => {
       let clientRecord = clientRecords.get(clientIp);
       if (!clientRecord) {
         clientRecord = {
-          count: 0,
+          count: 1, // 直接设置为1，因为当前请求是第一个
           lastReset: now
         };
         clientRecords.set(clientIp, clientRecord);
+      } else {
+        // 检查是否需要重置计数
+        if (now - clientRecord.lastReset > config.windowMs) {
+          clientRecord.count = 1; // 重置后设置为1，因为当前请求是新窗口的第一个请求
+          clientRecord.lastReset = now;
+        } else {
+          // 增加请求计数
+          clientRecord.count++;
+        }
       }
-
-      // 检查是否需要重置计数
-      if (now - clientRecord.lastReset > config.windowMs) {
-        clientRecord.count = 0;
-        clientRecord.lastReset = now;
-      }
-
-      // 增加请求计数
-      clientRecord.count++;
 
       // 检查是否超过限制
       if (clientRecord.count > config.max) {
+        loggerService.warn('Rate limit exceeded', { clientIp, count: clientRecord.count, max: config.max });
         throw new TooManyRequestsError('请求过于频繁，请稍后再试');
       }
 
@@ -55,7 +57,9 @@ export const createRateLimitMiddleware = (config: RateLimitConfig) => {
       res.setHeader('X-RateLimit-Limit', config.max.toString());
       res.setHeader('X-RateLimit-Remaining', (config.max - clientRecord.count).toString());
       res.setHeader('X-RateLimit-Reset', (clientRecord.lastReset + config.windowMs).toString());
+      res.setHeader('X-RateLimit-Count', clientRecord.count.toString()); // 添加当前计数响应头，方便调试
 
+      loggerService.debug('Rate limit check passed', { clientIp, count: clientRecord.count, max: config.max });
       next();
     } catch (error) {
       next(error);

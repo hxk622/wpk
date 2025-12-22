@@ -69,7 +69,7 @@ const router = createRouter({
 });
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   // 检查路由是否需要认证
   if (to.matched.some(record => record.meta.requiresAuth)) {
     // 检查本地存储中是否有token
@@ -77,10 +77,29 @@ router.beforeEach((to, from, next) => {
     if (!token) {
       // 未登录，重定向到登录页
       next({ name: 'Login' });
-    } else {
-      // 已登录，继续访问
-      next();
+      return;
     }
+    
+    // 已登录，检查用户当前是否在房间中
+    if (to.name !== 'RoomDetail' && to.name !== 'Game') {
+      try {
+        // 动态导入roomApi，避免循环依赖
+        const { default: roomApi } = await import('../api/room');
+        const response = await roomApi.getUserCurrentRoom();
+        
+        // 如果用户当前在房间中，重定向到房间详情页
+        if (response && response.data && response.data.roomId) {
+          next({ name: 'RoomDetail', params: { id: response.data.roomId } });
+          return;
+        }
+      } catch (error) {
+        console.error('检查用户当前房间失败:', error);
+        // 检查失败，继续访问原路由
+      }
+    }
+    
+    // 已登录且不在房间中，或已经在房间相关页面，继续访问
+    next();
   } else {
     // 不需要认证的路由，直接访问
     next();

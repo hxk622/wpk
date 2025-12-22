@@ -208,16 +208,19 @@ import { useUserStore } from '../stores/user';
 // 路由和参数
 const router = useRouter();
 const route = useRoute();
-const roomId = route.params.id;
+// 直接使用route.params.id，因为useRoute()返回的是响应式对象，不是ref
+const roomId = computed(() => route.params.id);
+console.log('Room ID from route params:', route.params.id);
+console.log('Computed roomId:', roomId.value);
 
 // 当前用户信息
 const userStore = useUserStore();
 const currentUser = computed(() => userStore.userInfo);
-const currentUserId = currentUser?.id;
+const currentUserId = computed(() => currentUser.value?.id);
 
 // 房间信息
 const roomInfo = reactive({
-  id: roomId,
+  id: roomId.value,
   smallBlind: 10,
   bigBlind: 20,
   gameMode: 'no_limit',
@@ -276,12 +279,17 @@ const getRoomStatusText = (status) => {
 // 加载房间信息
 const loadRoomInfo = async () => {
   try {
-    const response = await roomApi.getRoomDetail(roomId);
+    if (!roomId.value) {
+      showToast('缺少房间ID，无法加载房间信息');
+      return;
+    }
+    
+    const response = await roomApi.getRoomDetail(roomId.value);
     const roomData = response.room || response;
     if (roomData) {
       Object.assign(roomInfo, roomData);
       // 检查当前用户是否在房间内
-      const currentPlayer = roomInfo.players.find(p => p.id === currentUserId);
+      const currentPlayer = roomInfo.players.find(p => p.id === currentUserId.value);
       isInRoom.value = !!currentPlayer;
       if (currentPlayer) {
         isReady.value = currentPlayer.ready;
@@ -296,13 +304,18 @@ const loadRoomInfo = async () => {
 // 加入房间
 const joinRoom = async () => {
   try {
+    if (!roomId.value) {
+      showToast('缺少房间ID，请返回房间列表重新选择');
+      return;
+    }
+    
     joining.value = true;
-    await roomApi.joinRoom(roomId);
+    await roomApi.joinRoom(roomId.value);
     showToast('加入房间成功');
     await loadRoomInfo();
     // 使用WebSocket加入房间
-    if (currentUserId) {
-      socketService.joinRoom(Number(roomId));
+    if (currentUserId.value) {
+      socketService.joinRoom(Number(roomId.value));
     }
   } catch (error) {
     console.error('加入房间失败:', error);
@@ -320,9 +333,9 @@ const leaveRoom = () => {
   }).then(async () => {
     try {
       // 使用WebSocket离开房间
-      socketService.leaveRoom(Number(roomId));
+      socketService.leaveRoom(Number(roomId.value));
       
-      await roomApi.leaveRoom(roomId);
+      await roomApi.leaveRoom(roomId.value);
       showToast('离开房间成功');
       router.push('/rooms');
     } catch (error) {
@@ -347,18 +360,18 @@ const handleExitRoom = () => {
 const toggleReady = async () => {
   try {
     // 使用WebSocket发送准备状态
-    socketService.sendPlayerReadyStatus(Number(roomId), !isReady.value);
+    socketService.sendPlayerReadyStatus(Number(roomId.value), !isReady.value);
     
     // 乐观更新本地状态
     isReady.value = !isReady.value;
-    const playerIndex = roomInfo.players.findIndex(p => p.id === currentUserId);
+    const playerIndex = roomInfo.players.findIndex(p => p.id === currentUserId.value);
     if (playerIndex !== -1) {
       roomInfo.players[playerIndex].ready = isReady.value;
     }
     showToast(isReady.value ? '已准备' : '已取消准备');
     
     // 也可以调用API作为备选方案
-    const response = await roomApi.toggleReady(roomId, !isReady.value);
+    const response = await roomApi.toggleReady(roomId.value, !isReady.value);
     if (response && response.error) {
       // API调用失败，回滚本地状态
       isReady.value = !isReady.value;
@@ -371,7 +384,7 @@ const toggleReady = async () => {
     console.error('切换准备状态失败:', error);
     // 网络错误，回滚本地状态
     isReady.value = !isReady.value;
-    const playerIndex = roomInfo.players.findIndex(p => p.id === currentUserId);
+    const playerIndex = roomInfo.players.findIndex(p => p.id === currentUserId.value);
     if (playerIndex !== -1) {
       roomInfo.players[playerIndex].ready = isReady.value;
     }
@@ -386,7 +399,7 @@ const kickPlayer = (playerId) => {
     message: '确定要将该玩家踢出房间吗？'
   }).then(async () => {
     try {
-      const response = await roomApi.kickPlayer(roomId, playerId);
+      const response = await roomApi.kickPlayer(roomId.value, playerId);
       if (response && !response.error) {
         showToast('踢出成功');
         await loadRoomInfo();
@@ -406,14 +419,10 @@ const kickPlayer = (playerId) => {
 const startGame = async () => {
   try {
     startingGame.value = true;
-    const response = await roomApi.startGame(roomId);
-      if (response && !response.error) {
-        showToast('游戏开始');
-        // 跳转到游戏界面
-        router.push(`/game/${roomId}`);
-      } else {
-        showToast(response?.error || '开始游戏失败');
-      }
+    const response = await roomApi.startGame(roomId.value);
+    showToast('游戏开始');
+    // 跳转到游戏界面
+    router.push(`/game/${roomId.value}`);
   } catch (error) {
     console.error('开始游戏失败:', error);
     showToast(error.message || '开始游戏失败');
@@ -427,9 +436,9 @@ const sendMessage = async () => {
   if (!chatInput.value.trim()) return;
   
   const message = {
-    senderId: currentUserId,
-    username: currentUser?.username || '我',
-    avatar: currentUser?.avatar,
+    senderId: currentUserId.value,
+    username: currentUser.value?.username || '我',
+    avatar: currentUser.value?.avatar,
     content: chatInput.value.trim(),
     timestamp: new Date().toISOString()
   };
@@ -440,10 +449,10 @@ const sendMessage = async () => {
   
   try {
     // 使用WebSocket发送消息
-    socketService.sendChatMessage(Number(roomId), message.content);
+    socketService.sendChatMessage(Number(roomId.value), message.content);
     
     // 也可以调用API作为备选方案
-    await roomApi.sendMessage(roomId, message.content);
+    await roomApi.sendMessage(roomId.value, message.content);
   } catch (error) {
     console.error('发送消息失败:', error);
     // 可以选择从本地移除失败的消息
@@ -457,9 +466,9 @@ onMounted(() => {
   loadRoomInfo();
   
   // 连接WebSocket并加入房间
-  if (currentUserId) {
+  if (currentUserId.value) {
     socketService.connect();
-    socketService.joinRoom(Number(roomId));
+    socketService.joinRoom(Number(roomId.value));
       
     // 监听房间状态更新
     socketService.on('room_state_update', (data) => {
@@ -468,7 +477,7 @@ onMounted(() => {
         const roomData = data.room || data;
         Object.assign(roomInfo, roomData);
         // 更新当前用户是否在房间内和准备状态
-        const currentPlayer = roomInfo.players.find(p => p.id === currentUserId);
+        const currentPlayer = roomInfo.players.find(p => p.id === currentUserId.value);
         isInRoom.value = !!currentPlayer;
         if (currentPlayer) {
           isReady.value = currentPlayer.ready;
@@ -493,7 +502,7 @@ onMounted(() => {
       if (player) {
         player.ready = data.ready;
         // 如果是当前用户，更新本地准备状态
-        if (data.playerId === currentUserId) {
+        if (data.playerId === currentUserId.value) {
           isReady.value = data.ready;
         }
       }
@@ -509,7 +518,7 @@ onMounted(() => {
 
 // 组件卸载时断开WebSocket连接
 onUnmounted(() => {
-  socketService.leaveRoom(Number(roomId));
+  socketService.leaveRoom(Number(roomId.value));
   socketService.offAll();
   // 注意：这里不要断开整个socket连接，因为可能还有其他组件需要使用
   // socketService.disconnect();

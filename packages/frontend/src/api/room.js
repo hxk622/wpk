@@ -33,12 +33,14 @@ const roomApi = {
   // 获取房间详情
   getRoomDetail: async (roomId) => {
     const response = await api.get(`/rooms/${roomId}`);
+    console.log('Raw room detail response:', response);
     // 转换数据格式：下划线命名法转为驼峰命名法
     if (response && response.room) {
       const room = response.room;
       return {
         room: {
           id: room.id,
+          name: room.name,
           smallBlind: room.small_blind,
           bigBlind: room.big_blind,
           gameMode: room.table_type,
@@ -55,8 +57,10 @@ const roomApi = {
   },
 
   // 加入房间
-  joinRoom: (roomId, joinData = {}) => {
-    return api.post(`/rooms/${roomId}/join`, joinData);
+  joinRoom: async (roomId, joinData = {}) => {
+    const response = await api.post(`/rooms/${roomId}/join`, joinData);
+    console.log('Raw join room response:', response);
+    return response;
   },
 
   // 离开房间
@@ -138,6 +142,17 @@ const roomApi = {
     console.warn('kickPlayer API 后端尚未实现');
     // 返回模拟响应（符合三元组结构）
     return { code: 0, data: { playerKicked: true }, message: '玩家已踢出' };
+  },
+  
+  // 获取用户当前所在房间
+  getUserCurrentRoom: async () => {
+    try {
+      const response = await api.get('/rooms/current');
+      return response;
+    } catch (error) {
+      console.error('获取用户当前房间失败:', error);
+      return { code: 404, data: { roomId: null }, message: '用户当前不在任何房间中' };
+    }
   }
 };
 

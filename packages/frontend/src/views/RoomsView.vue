@@ -152,8 +152,8 @@ const handleJoinRoom = async (roomId) => {
     // 调用加入房间API
     await roomApi.joinRoom(roomId);
 
-    // 加入成功，跳转到房间详情页
-    router.push(`/room/${roomId}`);
+    // 加入成功，直接跳转到游戏页面
+    router.push(`/game/${roomId}`);
   } catch (error) {
     console.error('加入房间失败:', error);
     showToast(error.message || '加入房间失败，请稍后重试');

@@ -4,6 +4,9 @@ import { createRoom, getRoomList, getRoomById, joinRoom, leaveRoom, validateRoom
 import { GameRoom, CreateRoomInput } from '../types';
 import loggerService from '../services/loggerService';
 import { successResponse, errorResponse } from '../utils/response';
+import { postgreSQLRoomDAO } from '../dao/impl/postgreSQLRoomDAO';
+
+
 
 const router = express.Router();
 
@@ -449,6 +452,53 @@ router.get('/', authenticateToken, async (req, res) => {
  *       404:
  *         description: 房间不存在
  */
+/**
+ * @swagger
+ * /rooms/current:
+ *   get:
+ *     summary: 获取用户当前所在房间
+ *     tags: [Rooms]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 获取成功，返回用户当前所在房间ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     roomId: string
+ *       404:
+ *         description: 用户当前不在任何房间中
+ *       401:
+ *         description: 未授权
+ */
+// 获取用户当前所在房间
+router.get('/current', authenticateToken, async (req, res) => {
+  const userId = req.user!.userId;
+  
+  try {
+    loggerService.info('收到获取用户当前房间请求', { userId });
+    const roomId = await postgreSQLRoomDAO.getUserCurrentRoom(userId);
+    
+    if (roomId) {
+      loggerService.info('获取用户当前房间成功', { userId, roomId });
+      res.status(200).json(successResponse({ roomId }, '获取用户当前房间成功'));
+    } else {
+      loggerService.info('用户当前不在任何房间中', { userId });
+      res.status(404).json(successResponse({ roomId: null }, '用户当前不在任何房间中'));
+    }
+  } catch (error) {
+    loggerService.error('获取用户当前房间失败', { error, userId });
+    res.status(500).json(errorResponse('获取用户当前房间失败', 500, { details: (error as Error).message }));
+  }
+});
+
 // 获取房间详情
 router.get('/:roomId', authenticateToken, async (req, res) => {
   const roomId = req.params.roomId;
@@ -518,6 +568,12 @@ router.post('/:roomId/join', authenticateToken, async (req, res) => {
   const { password } = req.body;
   
   try {
+    // 验证roomId是否存在
+    if (!roomId) {
+      loggerService.warn('加入房间失败：缺少房间ID', { userId });
+      return res.status(400).json(errorResponse('加入房间失败', 400, { details: '缺少房间ID' }));
+    }
+    
     loggerService.info('收到加入房间请求', { userId, roomId });
     // 如果是私人房间，验证密码
     const room = await getRoomById(roomId);

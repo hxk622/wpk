@@ -14,8 +14,8 @@
           </div>
           <div class="status-item">
             <span class="label">连接状态：</span>
-            <span class="value" :class="{ 'connected': isConnected, 'disconnected': !isConnected, 'reconnecting': reconnecting }">
-              {{ isConnected ? '已连接' : reconnecting ? '重连中...' : '已断开' }}
+            <span class="value" :class="{ 'connected': socketService.isConnected, 'disconnected': !socketService.isConnected, 'reconnecting': reconnecting }">
+              {{ socketService.isConnected ? '已连接' : reconnecting ? '重连中...' : '已断开' }}
             </span>
           </div>
           <div class="status-item">
@@ -262,8 +262,7 @@ const userStore = useUserStore();
 const currentUser = computed(() => userStore.userInfo);
 const currentUserId = computed(() => userStore.getUserId);
 
-// 连接状态
-const isConnected = ref(socketService.getConnectionStatus());
+// 连接状态 - 直接使用socketService的响应式状态
 const reconnecting = ref(false);
 const connectionError = ref(null);
 
@@ -615,7 +614,7 @@ const handleRoundTransition = (newRound) => {
 // 开始游戏
 const startGame = async () => {
   try {
-    if (!isConnected.value) {
+    if (!socketService.isConnected) {
       showToast('网络连接断开，无法操作');
       return;
     }
@@ -630,7 +629,7 @@ const startGame = async () => {
 // 重新开始游戏
 const restartGame = async () => {
   try {
-    if (!isConnected.value) {
+    if (!socketService.isConnected) {
       showToast('网络连接断开，无法操作');
       return;
     }
@@ -689,7 +688,7 @@ const handleGameEnd = (gameResult) => {
 // 弃牌
 const fold = async () => {
   try {
-    if (!isConnected.value) {
+    if (!socketService.isConnected) {
       showToast('网络连接断开，无法操作');
       return;
     }
@@ -705,7 +704,7 @@ const fold = async () => {
 const checkOrCall = async () => {
   const action = canCheck.value ? 'check' : 'call';
   try {
-    if (!isConnected.value) {
+    if (!socketService.isConnected) {
       showToast('网络连接断开，无法操作');
       return;
     }
@@ -720,7 +719,7 @@ const checkOrCall = async () => {
 // 过牌
 const check = async () => {
   try {
-    if (!isConnected.value) {
+    if (!socketService.isConnected) {
       showToast('网络连接断开，无法操作');
       return;
     }
@@ -735,7 +734,7 @@ const check = async () => {
 // 跟注
 const call = async () => {
   try {
-    if (!isConnected.value) {
+    if (!socketService.isConnected) {
       showToast('网络连接断开，无法操作');
       return;
     }
@@ -750,7 +749,7 @@ const call = async () => {
 // 全下
 const allIn = async () => {
   try {
-    if (!isConnected.value) {
+    if (!socketService.isConnected) {
       showToast('网络连接断开，无法操作');
       return;
     }
@@ -771,7 +770,7 @@ const raise = async (amount) => {
   }
   
   try {
-    if (!isConnected.value) {
+    if (!socketService.isConnected) {
       showToast('网络连接断开，无法操作');
       return;
     }
@@ -799,7 +798,7 @@ const sendChatMessage = async () => {
       );
       
       // 通过WebSocket发送到服务器
-      socketService.emit('chat_message', {
+      socketService.send('chat_message', {
         message: message.content,
         roomId: gameId,
         userId: currentUserId.value,
@@ -815,7 +814,7 @@ const sendChatMessage = async () => {
       );
       
       // 通过WebSocket发送到服务器
-      socketService.emit('chat_message', {
+      socketService.send('chat_message', {
         message: message.content,
         roomId: gameId,
         isPrivate: true,
@@ -831,7 +830,7 @@ const sendChatMessage = async () => {
     console.error('发送消息失败:', error);
     showToast('发送消息失败');
   }
-};
+}
 
 // 开始私聊
 const startPrivateChat = (userId, username) => {
@@ -1055,39 +1054,19 @@ const initGame = async () => {
     }
   } catch (error) {
     console.error('初始化游戏失败:', error);
-    showToast('初始化游戏失败');
-    router.push(`/room/${roomId}`);
+    // 游戏可能还未开始，不跳回房间详情页，继续留在游戏页面
+    showToast('游戏还未开始，等待中...');
+    gameState.status = GAME_STATUS.WAITING;
   }
 };
 
 // 监听游戏状态变化
 const listenGameUpdates = () => {
-  // 监听连接状态变化
-  const connectionCheckInterval = setInterval(() => {
-    const currentStatus = socketService.getConnectionStatus();
-    if (currentStatus !== isConnected.value) {
-      isConnected.value = currentStatus;
-      
-      if (currentStatus) {
-        reconnecting.value = false;
-        connectionError.value = null;
-        showToast('已重新连接到游戏服务器');
-        // 重新加入房间
-        socketService.emit('join_room', { roomId });
-      } else {
-        if (!reconnecting.value) {
-          reconnecting.value = true;
-          connectionError.value = '连接已断开，正在尝试重连...';
-        }
-      }
-    }
-  }, 1000);
-
   // 连接WebSocket
-  socketService.connect();
+  socketService.connect(currentUserId.value);
   
   // 加入游戏房间
-  socketService.emit('join_room', { roomId });
+  socketService.joinRoom(gameId);
   
   // 监听游戏状态更新
   socketService.on('game_state_update', (data) => {
@@ -1205,9 +1184,32 @@ const listenGameUpdates = () => {
     showToast(`WebSocket错误: ${data.message || '未知错误'}`);
   });
   
+  // 监听连接状态变化
+  const checkConnectionStatus = () => {
+    if (!socketService.isConnected && !reconnecting.value) {
+      reconnecting.value = true;
+      connectionError.value = '连接已断开，正在尝试重连...';
+    } else if (socketService.isConnected && reconnecting.value) {
+      reconnecting.value = false;
+      connectionError.value = null;
+      showToast('已重新连接到游戏服务器');
+      // 重新加入房间
+      socketService.joinRoom(gameId);
+    }
+  };
+  
+  // 使用watch监听连接状态变化
+  const unwatchConnection = watch(
+    () => socketService.isConnected,
+    () => {
+      checkConnectionStatus();
+    }
+  );
+  
   // 返回清理函数
   return () => {
-    clearInterval(connectionCheckInterval);
+    // 停止监听连接状态
+    unwatchConnection();
     // 移除所有注册的事件监听器
     socketService.off('game_state_update');
     socketService.off('api_error');
@@ -1260,7 +1262,7 @@ onBeforeUnmount(() => {
     cleanupFunction();
   }
   // 离开游戏房间
-  socketService.emit('leave_room', { roomId });
+  socketService.leaveRoom(gameId);
   // 断开WebSocket连接
   socketService.disconnect();
 });

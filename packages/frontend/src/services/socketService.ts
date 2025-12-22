@@ -17,7 +17,10 @@ class SocketService {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private reconnectDelay: number = 2000;
-  public isConnected = ref(false);
+  private _isConnected: boolean = false;
+  public get isConnected(): boolean {
+    return this._isConnected;
+  }
 
   constructor() {
     // 初始化事件处理器映射
@@ -56,7 +59,7 @@ class SocketService {
         // 连接打开事件
         this.socket.onopen = () => {
           console.log('WebSocket连接已建立');
-          this.isConnected.value = true;
+          this._isConnected = true;
           this.isConnecting = false;
           this.reconnectAttempts = 0;
           resolve(true);
@@ -75,7 +78,7 @@ class SocketService {
         // 连接关闭事件
         this.socket.onclose = (event) => {
           console.log('WebSocket连接已关闭:', event.code, event.reason);
-          this.isConnected.value = false;
+          this._isConnected = false;
           this.isConnecting = false;
           
           // 自动重连
@@ -177,6 +180,11 @@ class SocketService {
     } else {
       console.error('达到最大重连尝试次数，停止重连');
     }
+  }
+  
+  // 获取连接状态
+  public getConnectionStatus(): boolean {
+    return this._isConnected;
   }
 
   // 加入房间
